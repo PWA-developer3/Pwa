@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedFiles = [];
     let currentFileView = null;
     let currentAction = null;
-    let folders = [];
     let currentFolder = null;
     
     // Inicializar componentes de Bootstrap
@@ -36,61 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
         toast.show();
     }
     
-    // Actualizar prefijo telefónico según país seleccionado
-    function updatePhonePrefix() {
-        const countrySelect = document.getElementById('country');
-        const selectedOption = countrySelect.options[countrySelect.selectedIndex];
-        const phonePrefix = document.querySelector('.input-group-text');
-        
-        if (selectedOption.dataset.prefix) {
-            phonePrefix.textContent = selectedOption.dataset.prefix;
-        } else {
-            phonePrefix.textContent = '+';
-        }
-    }
-    
-    // Validar contraseña (ocultando Mpteen para usuarios normales)
-    function validatePassword(password, showError = false) {
-        const passwordStrength = document.getElementById('passwordStrength');
-        const passwordInput = document.getElementById('password');
-        
-        // Expresión regular para contraseña normal
-        const normalPasswordRegex = /^(?=.*[A-Z])(?=.*[a-z]{5})(?=.*\d{4})(?=.*[@#&]{2}).{12}$/;
-        // Expresión regular para desarrolladores
-        const devPasswordRegex = /^Mpteen(?=.*\d{4})(?=.*[@#&]{2}).{12}$/;
-        
-        let isValid = false;
-        let isDev = password.startsWith('Mpteen') && devPasswordRegex.test(password);
-        
-        // Validar según el tipo de usuario
-        if (isDev) {
-            isValid = true; // Es desarrollador
-        } else {
-            isValid = normalPasswordRegex.test(password); // Usuario normal
-        }
-        
-        // Calcular fortaleza (ocultando el prefijo Mpteen en la interfaz)
-        let displayPassword = isDev ? password.replace(/^Mpteen/, '') : password;
-        let strength = 0;
-        if (displayPassword.length >= (isDev ? 6 : 12)) strength++;
-        if (/[A-Z]/.test(displayPassword)) strength++;
-        if (/\d/.test(displayPassword)) strength++;
-        if (/[@#&]/.test(displayPassword)) strength++;
-        
-        // Actualizar barra de fortaleza
-        passwordStrength.className = `password-strength strength-${strength}`;
-        
-        // Mostrar error si se solicita
-        if (showError && !isValid) {
-            passwordInput.classList.add('is-invalid');
-            showToast('Error', 'La contraseña no cumple con los requisitos', true);
-            return false;
-        } else if (isValid) {
-            passwordInput.classList.remove('is-invalid');
-        }
-        
-        return isValid;
-    }
+    // Cargar lista de países físicos
+    loadCountries();
     
     // Manejar el formulario de registro
     const registerForm = document.getElementById('registerForm');
@@ -129,6 +75,291 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }
     });
+    
+    // Manejar el formulario de login
+    const loginForm = document.getElementById('loginForm');
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        
+        loginUser(email, password)
+            .then(user => {
+                if (!user.isActive) {
+                    showToast('Error', 'Tu cuenta ha sido desactivada por el administrador', true);
+                    return;
+                }
+                showMainPanel(user);
+            })
+            .catch(error => {
+                showToast('Error', 'Credenciales incorrectas o usuario no registrado', true);
+            });
+    });
+    
+    // Manejar el botón de ayuda
+    const helpBtn = document.getElementById('helpBtn');
+    const helpPanel = document.getElementById('helpPanel');
+    const helpOverlay = document.getElementById('helpOverlay');
+    const closeHelpBtn = document.getElementById('closeHelpBtn');
+    
+    helpBtn.addEventListener('click', function() {
+        helpPanel.style.display = 'block';
+        helpOverlay.style.display = 'block';
+    });
+    
+    closeHelpBtn.addEventListener('click', function() {
+        helpPanel.style.display = 'none';
+        helpOverlay.style.display = 'none';
+    });
+    
+    helpOverlay.addEventListener('click', function() {
+        helpPanel.style.display = 'none';
+        helpOverlay.style.display = 'none';
+    });
+    
+    // Manejar el formulario de ayuda por email
+    const emailHelpForm = document.getElementById('emailHelpForm');
+    emailHelpForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('helpName').value;
+        const email = document.getElementById('helpEmail').value;
+        
+        // Abrir cliente de email
+        window.location.href = `mailto:enzemajr@gmail.com?subject=Consulta%20de%20ayuda%20de%20${encodeURIComponent(name)}&body=Por%20favor%20escriba%20su%20consulta%20aqu%C3%AD...`;
+        
+        // Cerrar panel de ayuda
+        helpPanel.style.display = 'none';
+        helpOverlay.style.display = 'none';
+        
+        // Limpiar formulario
+        emailHelpForm.reset();
+        
+        showToast('Éxito', 'Se ha abierto tu cliente de correo para enviar la consulta');
+    });
+    
+    // Manejar el formulario de ayuda por WhatsApp
+    const whatsappHelpForm = document.getElementById('whatsappHelpForm');
+    whatsappHelpForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('helpWhatsappName').value;
+        const number = document.getElementById('helpWhatsappNumber').value;
+        
+        // Abrir WhatsApp
+        window.open(`https://wa.me/+240222084663?text=Hola,%20soy%20${encodeURIComponent(name)}.%20Tengo%20una%20consulta%20sobre%20mYpuB...`, '_blank');
+        
+        // Cerrar panel de ayuda
+        helpPanel.style.display = 'none';
+        helpOverlay.style.display = 'none';
+        
+        // Limpiar formulario
+        whatsappHelpForm.reset();
+        
+        showToast('Éxito', 'Se ha abierto WhatsApp para enviar tu consulta');
+    });
+    
+    // Validar contraseña en tiempo real
+    const passwordInput = document.getElementById('password');
+    passwordInput.addEventListener('input', function() {
+        validatePassword(this.value);
+    });
+    
+    // Manejar cambio de país para actualizar prefijo telefónico
+    const countrySelect = document.getElementById('country');
+    countrySelect.addEventListener('change', function() {
+        updatePhonePrefix();
+    });
+    
+    // Manejar cierre de sesión
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            logoutUser();
+        });
+    }
+    
+    // Manejar selección de archivos
+    const fileInput = document.getElementById('fileInput');
+    const selectFilesBtn = document.getElementById('selectFilesBtn');
+    const uploadDropzone = document.getElementById('uploadDropzone');
+    
+    selectFilesBtn.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', function() {
+        handleFileSelection(this.files);
+    });
+    
+    // Manejar drag and drop
+    uploadDropzone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('active');
+    });
+    
+    uploadDropzone.addEventListener('dragleave', function() {
+        this.classList.remove('active');
+    });
+    
+    uploadDropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('active');
+        
+        if (e.dataTransfer.files.length > 0) {
+            handleFileSelection(e.dataTransfer.files);
+        }
+    });
+    
+    uploadDropzone.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    // Manejar subida de archivos
+    const uploadFilesBtn = document.getElementById('uploadFilesBtn');
+    uploadFilesBtn.addEventListener('click', function() {
+        uploadSelectedFiles();
+    });
+    
+    // Manejar navegación entre módulos
+    const moduleLinks = document.querySelectorAll('[data-module]');
+    moduleLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchModule(this.dataset.module);
+        });
+    });
+    
+    // Manejar búsqueda en galería
+    const searchBtn = document.getElementById('searchBtn');
+    searchBtn.addEventListener('click', function() {
+        loadGalleryFiles();
+    });
+    
+    const gallerySearch = document.getElementById('gallerySearch');
+    gallerySearch.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            loadGalleryFiles();
+        }
+    });
+    
+    // Manejar like en archivo
+    const likeBtn = document.getElementById('likeBtn');
+    likeBtn.addEventListener('click', function() {
+        toggleLike(currentFileView.id);
+    });
+    
+    // Manejar descarga de archivo
+    const downloadBtn = document.getElementById('downloadBtn');
+    downloadBtn.addEventListener('click', function() {
+        downloadFile(currentFileView.id);
+    });
+    
+    // Manejar eliminación de archivo
+    const deleteBtn = document.getElementById('deleteBtn');
+    deleteBtn.addEventListener('click', function() {
+        showConfirmModal(
+            'Eliminar archivo',
+            '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.',
+            () => deleteFile(currentFileView.id)
+        );
+    });
+    
+    // Manejar compartir archivo
+    const shareBtn = document.getElementById('shareBtn');
+    shareBtn.addEventListener('click', function() {
+        shareFile();
+    });
+    
+    // Manejar creación de carpeta
+    const createFolderBtn = document.getElementById('createFolderBtn');
+    createFolderBtn.addEventListener('click', function() {
+        showCreateFolderModal();
+    });
+    
+    // Manejar confirmación de acciones
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
+    confirmActionBtn.addEventListener('click', function() {
+        if (currentAction && typeof currentAction === 'function') {
+            currentAction();
+        }
+        confirmModal.hide();
+    });
+    
+    // Manejar creación de carpeta
+    const folderForm = document.getElementById('folderForm');
+    folderForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        createFolder();
+    });
+    
+    // Función para cargar lista física de países
+    function loadCountries() {
+        const countries = [
+            { name: 'España', prefix: '+34' },
+            { name: 'México', prefix: '+52' },
+            { name: 'Estados Unidos', prefix: '+1' },
+            { name: 'Argentina', prefix: '+54' },
+            { name: 'Colombia', prefix: '+57' },
+            { name: 'Perú', prefix: '+51' },
+            { name: 'Chile', prefix: '+56' },
+            { name: 'Venezuela', prefix: '+58' },
+            { name: 'Ecuador', prefix: '+593' },
+            { name: 'Guatemala', prefix: '+502' },
+            { name: 'Cuba', prefix: '+53' },
+            { name: 'República Dominicana', prefix: '+1-809' },
+            { name: 'Honduras', prefix: '+504' },
+            { name: 'Paraguay', prefix: '+595' },
+            { name: 'El Salvador', prefix: '+503' },
+            { name: 'Nicaragua', prefix: '+505' },
+            { name: 'Costa Rica', prefix: '+506' },
+            { name: 'Panamá', prefix: '+507' },
+            { name: 'Uruguay', prefix: '+598' },
+            { name: 'Guinea Ecuatorial', prefix: '+240' }
+        ];
+        
+        const countrySelect = document.getElementById('country');
+        
+        // Limpiar opciones existentes
+        countrySelect.innerHTML = '';
+        
+        // Agregar opción por defecto
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Selecciona un país';
+        defaultOption.selected = true;
+        defaultOption.disabled = true;
+        countrySelect.appendChild(defaultOption);
+        
+        // Ordenar países alfabéticamente
+        countries.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Agregar cada país al select
+        countries.forEach(country => {
+            const option = document.createElement('option');
+            option.value = country.name;
+            option.dataset.prefix = country.prefix;
+            option.textContent = `${country.name} (${country.prefix})`;
+            countrySelect.appendChild(option);
+        });
+    }
+    
+    // Actualizar prefijo telefónico según país seleccionado
+    function updatePhonePrefix() {
+        const countrySelect = document.getElementById('country');
+        const selectedOption = countrySelect.options[countrySelect.selectedIndex];
+        const phonePrefix = document.querySelector('.input-group-text');
+        const phoneInput = document.getElementById('phone');
+        
+        if (selectedOption.dataset.prefix) {
+            phonePrefix.textContent = selectedOption.dataset.prefix;
+            phoneInput.value = selectedOption.dataset.prefix;
+            phoneInput.focus();
+        } else {
+            phonePrefix.textContent = '+';
+        }
+    }
     
     // Validar formulario de registro
     function validateRegisterForm() {
@@ -169,9 +400,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Validar teléfono
-        const phoneRegex = /^\d{6,15}$/; // Solo números, entre 6 y 15 dígitos
+        const phoneRegex = /^\+\d{1,4}\d{6,15}$/; // Prefijo + números, entre 6 y 15 dígitos
         if (!phoneRegex.test(phone)) {
-            showToast('Error', 'Por favor ingresa un número de teléfono válido (solo números)', true);
+            showToast('Error', 'Por favor ingresa un número de teléfono válido (incluyendo prefijo)', true);
             return false;
         }
         
@@ -189,26 +420,63 @@ document.addEventListener('DOMContentLoaded', function() {
         return true;
     }
     
-    // Manejar el formulario de login
-    const loginForm = document.getElementById('loginForm');
-    loginForm.addEventListener('submit', function(e) {
-        e.preventDefault();
+    // Validar contraseña
+    function validatePassword(password, showError = false) {
+        const passwordStrength = document.getElementById('passwordStrength');
+        const passwordInput = document.getElementById('password');
         
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
+        // Expresión regular para contraseña normal
+        const normalPasswordRegex = /^(?=.*[A-Z])(?=.*[a-z]{5})(?=.*\d{4})(?=.*[@#&]{2}).{12}$/;
+        // Expresión regular para desarrolladores
+        const devPasswordRegex = /^Mpteen(?=.*\d{4})(?=.*[@#&]{2}).{12}$/;
         
-        loginUser(email, password)
-            .then(user => {
-                if (!user.isActive) {
-                    showToast('Error', 'Tu cuenta ha sido desactivada por el administrador', true);
-                    return;
-                }
-                showMainPanel(user);
-            })
-            .catch(error => {
-                showToast('Error', 'Credenciales incorrectas o usuario no registrado', true);
-            });
-    });
+        let isValid = false;
+        let isDev = false;
+        let strength = 0;
+        
+        // Verificar si es contraseña de desarrollador
+        if (password.startsWith('Mpteen')) {
+            isDev = devPasswordRegex.test(password);
+            isValid = isDev;
+        } else {
+            isValid = normalPasswordRegex.test(password);
+        }
+        
+        // Calcular fortaleza de la contraseña (simplificado)
+        if (password.length >= 12) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/\d/.test(password)) strength++;
+        if (/[@#&]/.test(password)) strength++;
+        
+        // Actualizar barra de fortaleza
+        passwordStrength.className = `password-strength strength-${strength}`;
+        
+        // Mostrar mensaje de requisitos (sin mencionar Mpteen)
+        const passwordHelp = document.getElementById('passwordHelp');
+        if (passwordHelp) {
+            passwordHelp.innerHTML = `
+                <small>La contraseña debe contener:</small>
+                <ul class="small">
+                    <li>Al menos 12 caracteres</li>
+                    <li>1 letra mayúscula</li>
+                    <li>5 letras minúsculas</li>
+                    <li>4 números</li>
+                    <li>2 caracteres especiales (@, # o &)</li>
+                </ul>
+            `;
+        }
+        
+        // Mostrar error si se solicita
+        if (showError && !isValid) {
+            passwordInput.classList.add('is-invalid');
+            showToast('Error', 'La contraseña no cumple con los requisitos', true);
+            return false;
+        } else if (isValid) {
+            passwordInput.classList.remove('is-invalid');
+        }
+        
+        return isValid;
+    }
     
     // Mostrar panel principal
     function showMainPanel(user) {
@@ -278,11 +546,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadFilesBtn.disabled = true;
                 document.getElementById('uploadStatus').textContent = '';
                 document.getElementById('uploadProgress').style.display = 'none';
-                loadUserFolders();
                 break;
                 
             case 'gallery':
-                loadGalleryContent();
+                currentFolder = null;
+                loadGalleryFiles();
+                loadUserFolders();
                 break;
                 
             case 'share':
@@ -303,94 +572,215 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Cargar contenido de la galería (carpetas y archivos)
-    function loadGalleryContent() {
-        loadUserFolders();
-        loadGalleryFiles();
+    // Manejar selección de archivos
+    function handleFileSelection(files) {
+        selectedFiles = Array.from(files);
+        
+        // Validar tipos de archivo
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/avi', 'video/quicktime'];
+        const invalidFiles = selectedFiles.filter(file => !validTypes.includes(file.type));
+        
+        if (invalidFiles.length > 0) {
+            showToast('Error', `Algunos archivos no son válidos: ${invalidFiles.map(f => f.name).join(', ')}`, true);
+            selectedFiles = selectedFiles.filter(file => validTypes.includes(file.type));
+        }
+        
+        if (selectedFiles.length > 0) {
+            uploadFilesBtn.disabled = false;
+            document.getElementById('uploadStatus').textContent = `Seleccionados ${selectedFiles.length} archivo(s)`;
+        } else {
+            uploadFilesBtn.disabled = true;
+            document.getElementById('uploadStatus').textContent = 'No hay archivos seleccionados';
+        }
+    }
+    
+    // Subir archivos seleccionados
+    function uploadSelectedFiles() {
+        if (selectedFiles.length === 0) return;
+        
+        const visibility = document.getElementById('fileVisibility').value;
+        const description = document.getElementById('fileDescription').value;
+        
+        const progressBar = document.getElementById('uploadProgress').querySelector('.progress-bar');
+        document.getElementById('uploadProgress').style.display = 'block';
+        progressBar.style.width = '0%';
+        
+        let uploadCount = 0;
+        
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const fileData = {
+                    name: file.name,
+                    type: file.type.startsWith('image') ? 'image' : 'video',
+                    size: file.size,
+                    data: e.target.result.split(',')[1], // Solo la parte base64
+                    visibility: visibility,
+                    description: description,
+                    userEmail: currentUser.email,
+                    userName: currentUser.fullName,
+                    uploadDate: new Date().toISOString(),
+                    likes: [],
+                    downloads: 0,
+                    sharedWith: [],
+                    folderId: currentFolder // Agregar a la carpeta actual si existe
+                };
+                
+                saveFile(fileData)
+                    .then(() => {
+                        uploadCount++;
+                        const progress = Math.round((uploadCount / selectedFiles.length) * 100);
+                        progressBar.style.width = `${progress}%`;
+                        
+                        if (uploadCount === selectedFiles.length) {
+                            document.getElementById('uploadStatus').textContent = 'Todos los archivos se han subido correctamente';
+                            uploadFilesBtn.disabled = true;
+                            selectedFiles = [];
+                            fileInput.value = '';
+                            
+                            // Recargar la galería si está activa
+                            if (document.getElementById('galleryModule').classList.contains('active')) {
+                                loadGalleryFiles();
+                                loadUserFolders();
+                            }
+                            
+                            showToast('Éxito', 'Archivos subidos correctamente');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al subir archivo:', error);
+                        showToast('Error', `Error al subir ${file.name}`, true);
+                    });
+            };
+            
+            reader.readAsDataURL(file);
+        });
     }
     
     // Cargar carpetas del usuario
     function loadUserFolders() {
-        const folderSelect = document.getElementById('fileFolder');
-        const foldersContainer = document.getElementById('foldersContainer');
+        const foldersContainer = document.getElementById('userFolders');
         
-        // Limpiar select de carpetas
-        folderSelect.innerHTML = '<option value="" selected>Sin carpeta</option>';
-        
-        // Mostrar spinner
         foldersContainer.innerHTML = `
-            <div class="col-12 text-center py-3">
-                <div class="spinner-border text-primary" role="status">
+            <div class="text-center py-2">
+                <div class="spinner-border spinner-border-sm" role="status">
                     <span class="visually-hidden">Cargando...</span>
                 </div>
             </div>
         `;
         
         getUserFolders(currentUser.email)
-            .then(userFolders => {
-                folders = userFolders;
-                
-                // Actualizar select de carpetas
-                folders.forEach(folder => {
-                    const option = document.createElement('option');
-                    option.value = folder.id;
-                    option.textContent = folder.name;
-                    folderSelect.appendChild(option);
-                });
-                
-                // Mostrar carpetas en la galería
+            .then(folders => {
                 if (folders.length === 0) {
-                    foldersContainer.innerHTML = '';
+                    foldersContainer.innerHTML = '<p class="text-muted small">No tienes carpetas creadas</p>';
                     return;
                 }
                 
-                foldersContainer.innerHTML = '';
+                let html = '<div class="d-flex flex-wrap gap-2 mb-3">';
                 
+                // Carpeta "Todos" (por defecto)
+                html += `
+                    <button class="btn btn-sm ${!currentFolder ? 'btn-primary' : 'btn-outline-primary'} folder-btn" data-folder-id="">
+                        <i class="bi bi-folder"></i> Todos
+                    </button>
+                `;
+                
+                // Carpetas del usuario
                 folders.forEach(folder => {
-                    const col = document.createElement('div');
-                    col.className = 'col-md-3 col-sm-6 mb-3';
-                    
-                    const card = document.createElement('div');
-                    card.className = 'card folder-card h-100';
-                    card.dataset.folderId = folder.id;
-                    
-                    // Determinar badge de privacidad
-                    let privacyBadge = '';
-                    if (folder.privacy === 'private') {
-                        privacyBadge = '<span class="badge bg-warning privacy-badge">Privada</span>';
-                    } else if (folder.privacy === 'intimate') {
-                        privacyBadge = '<span class="badge bg-danger privacy-badge">Íntima</span>';
-                    } else {
-                        privacyBadge = '<span class="badge bg-success privacy-badge">Pública</span>';
-                    }
-                    
-                    card.innerHTML = `
-                        <div class="card-body text-center">
-                            <i class="bi bi-folder folder-icon"></i>
-                            <h5 class="card-title mt-2">${folder.name}</h5>
-                            <p class="card-text small">${folder.files.length} archivos</p>
-                            ${privacyBadge}
-                        </div>
+                    html += `
+                        <button class="btn btn-sm ${currentFolder === folder.id ? 'btn-primary' : 'btn-outline-primary'} folder-btn" data-folder-id="${folder.id}">
+                            <i class="bi bi-folder${folder.visibility === 'private' ? '-fill' : ''}"></i> ${folder.name}
+                        </button>
                     `;
-                    
-                    // Agregar event listener para abrir carpeta
-                    card.addEventListener('click', function() {
-                        currentFolder = folder;
+                });
+                
+                html += '</div>';
+                foldersContainer.innerHTML = html;
+                
+                // Agregar event listeners a los botones de carpeta
+                document.querySelectorAll('.folder-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        currentFolder = this.dataset.folderId || null;
                         loadGalleryFiles();
+                        loadUserFolders(); // Recargar para actualizar estilos
                     });
-                    
-                    col.appendChild(card);
-                    foldersContainer.appendChild(col);
                 });
             })
             .catch(error => {
                 console.error('Error al cargar carpetas:', error);
-                foldersContainer.innerHTML = `
-                    <div class="col-12 text-center py-3">
-                        <i class="bi bi-exclamation-triangle text-danger"></i>
-                        <p>Error al cargar carpetas</p>
-                    </div>
-                `;
+                foldersContainer.innerHTML = '<p class="text-muted small">Error al cargar carpetas</p>';
+            });
+    }
+    
+    // Mostrar modal para crear carpeta
+    function showCreateFolderModal() {
+        document.getElementById('folderName').value = '';
+        document.getElementById('folderVisibility').value = 'public';
+        folderModal.show();
+    }
+    
+    // Crear nueva carpeta
+    function createFolder() {
+        const name = document.getElementById('folderName').value.trim();
+        const visibility = document.getElementById('folderVisibility').value;
+        
+        if (!name) {
+            showToast('Error', 'Por favor ingresa un nombre para la carpeta', true);
+            return;
+        }
+        
+        const folderData = {
+            name: name,
+            visibility: visibility,
+            userEmail: currentUser.email,
+            createdAt: new Date().toISOString(),
+            lastChecked: new Date().toISOString()
+        };
+        
+        saveFolder(folderData)
+            .then(() => {
+                showToast('Éxito', 'Carpeta creada correctamente');
+                folderModal.hide();
+                loadUserFolders();
+            })
+            .catch(error => {
+                console.error('Error al crear carpeta:', error);
+                showToast('Error', 'No se pudo crear la carpeta', true);
+            });
+    }
+    
+    // Verificar y eliminar carpetas vacías antiguas
+    function checkEmptyFolders() {
+        getAllFolders()
+            .then(folders => {
+                const now = new Date();
+                const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+                
+                folders.forEach(folder => {
+                    // Verificar si la carpeta está vacía y es antigua
+                    if (new Date(folder.createdAt) < twentyFourHoursAgo) {
+                        getFilesInFolder(folder.id)
+                            .then(files => {
+                                if (files.length === 0) {
+                                    // Eliminar carpeta si está vacía por más de 24 horas
+                                    deleteFolder(folder.id)
+                                        .then(() => {
+                                            console.log(`Carpeta ${folder.name} eliminada por estar vacía más de 24 horas`);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error al eliminar carpeta vacía:', error);
+                                        });
+                                } else {
+                                    // Actualizar fecha de verificación
+                                    updateFolder(folder.id, { lastChecked: new Date().toISOString() });
+                                }
+                            });
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error al verificar carpetas vacías:', error);
             });
     }
     
@@ -404,15 +794,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Cargando...</span>
                 </div>
-                <p class="mt-2">Cargando archivos...</p>
+                <p class="mt-2">Cargando galería...</p>
             </div>
         `;
         
-        Promise.all([getAllFiles(), getAllFolders()])
-            .then(([files, folders]) => {
-                // Filtrar archivos según carpeta seleccionada
+        getAllFiles()
+            .then(files => {
+                // Filtrar según carpeta actual
                 if (currentFolder) {
-                    files = files.filter(file => file.folderId === currentFolder.id);
+                    files = files.filter(file => file.folderId === currentFolder);
+                } else {
+                    // Mostrar todos los archivos que no están en carpetas o son del usuario
+                    files = files.filter(file => 
+                        !file.folderId || 
+                        file.userEmail === currentUser.email
+                    );
                 }
                 
                 // Filtrar según búsqueda
@@ -424,29 +820,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     );
                 }
                 
-                // Filtrar según privacidad
+                // Filtrar según visibilidad
                 files = files.filter(file => {
-                    // Si el archivo está en una carpeta íntima, solo el dueño puede verlo
-                    if (file.folderId) {
-                        const folder = folders.find(f => f.id === file.folderId);
-                        if (folder && folder.privacy === 'intimate') {
-                            return folder.creator === currentUser.email;
-                        }
-                    }
+                    // Mostrar todos los archivos del usuario
+                    if (file.userEmail === currentUser.email) return true;
                     
-                    // Si el archivo es íntimo, solo el dueño puede verlo
-                    if (file.privacy === 'intimate') {
-                        return file.userEmail === currentUser.email;
-                    }
+                    // Mostrar archivos públicos
+                    if (file.visibility === 'public') return true;
                     
-                    // Si el archivo es privado, solo el dueño y usuarios con acceso pueden verlo
-                    if (file.privacy === 'private') {
-                        return file.userEmail === currentUser.email || 
-                               file.sharedWith.includes(currentUser.email);
-                    }
+                    // Mostrar archivos compartidos con el usuario
+                    if (file.sharedWith.includes(currentUser.email)) return true;
                     
-                    // Archivos públicos son visibles para todos
-                    return true;
+                    return false;
                 });
                 
                 // Ordenar por fecha más reciente
@@ -486,27 +871,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     const isLiked = file.likes.includes(currentUser.email);
                     const isOwner = file.userEmail === currentUser.email;
                     
-                    // Determinar badge de privacidad
-                    let privacyBadge = '';
-                    if (file.privacy === 'private') {
-                        privacyBadge = '<span class="badge bg-warning privacy-badge">Privado</span>';
-                    } else if (file.privacy === 'intimate') {
-                        privacyBadge = '<span class="badge bg-danger privacy-badge">Íntimo</span>';
+                    // Mostrar icono de privacidad
+                    let privacyIcon = '';
+                    if (file.visibility === 'private') {
+                        privacyIcon = '<i class="bi bi-lock-fill text-danger ms-1" title="Privado"></i>';
+                    } else if (file.sharedWith.length > 0) {
+                        privacyIcon = '<i class="bi bi-people-fill text-primary ms-1" title="Compartido"></i>';
                     }
                     
                     card.innerHTML = `
                         ${thumbnailContent}
                         <div class="card-body">
-                            <h6 class="card-title">${file.name}</h6>
+                            <h6 class="card-title">${file.name} ${privacyIcon}</h6>
                             <p class="card-text small text-muted">Subido por: ${file.userName}</p>
                             <p class="card-text small text-muted">${new Date(file.uploadDate).toLocaleString()}</p>
-                            ${privacyBadge}
                             <div class="file-actions">
                                 <div>
                                     <button class="btn btn-sm ${isLiked ? 'btn-primary' : 'btn-outline-primary'} like-btn" data-file-id="${file.id}">
                                         <i class="bi bi-hand-thumbs-up"></i> ${file.likes.length}
                                     </button>
-                                    ${file.privacy === 'public' || isOwner ? `
+                                    ${file.visibility === 'public' || isOwner ? `
                                         <button class="btn btn-sm btn-outline-success download-btn ms-2" data-file-id="${file.id}">
                                             <i class="bi bi-download"></i>
                                         </button>
@@ -516,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="bi bi-eye"></i>
                                 </button>
                             </div>
-                            ${isOwner || currentUser.isDeveloper ? `
+                            ${isOwner ? `
                                 <div class="mt-2 text-end">
                                     <button class="btn btn-sm btn-outline-danger delete-btn" data-file-id="${file.id}">
                                         <i class="bi bi-trash"></i>
@@ -531,7 +915,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 // Agregar event listeners a los botones
-                addFileEventListeners();
+                document.querySelectorAll('.like-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        toggleLike(this.dataset.fileId);
+                    });
+                });
+                
+                document.querySelectorAll('.download-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        downloadFile(this.dataset.fileId);
+                    });
+                });
+                
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        viewFile(this.dataset.fileId);
+                    });
+                });
+                
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        showConfirmModal(
+                            'Eliminar archivo',
+                            '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.',
+                            () => deleteFile(this.dataset.fileId)
+                        );
+                    });
+                });
             })
             .catch(error => {
                 console.error('Error al cargar archivos:', error);
@@ -544,115 +954,432 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    // Agregar event listeners a los botones de archivos
-    function addFileEventListeners() {
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                toggleLike(this.dataset.fileId);
+    // Ver archivo en modal
+    function viewFile(fileId) {
+        getFileById(fileId)
+            .then(file => {
+                currentFileView = file;
+                
+                const modalTitle = document.getElementById('fileModalTitle');
+                const modalContent = document.getElementById('fileModalContent');
+                const likesCount = document.getElementById('fileLikesCount');
+                const fileOwner = document.getElementById('fileOwner');
+                const fileDate = document.getElementById('fileDate');
+                const deleteBtn = document.getElementById('deleteBtn');
+                
+                modalTitle.textContent = file.name;
+                
+                if (file.type === 'image') {
+                    modalContent.innerHTML = `<img src="data:image/jpeg;base64,${file.data}" class="img-fluid" alt="${file.name}">`;
+                } else {
+                    modalContent.innerHTML = `
+                        <video controls class="w-100">
+                            <source src="data:video/mp4;base64,${file.data}" type="video/mp4">
+                            Tu navegador no soporta el elemento de video.
+                        </video>
+                    `;
+                }
+                
+                likesCount.textContent = file.likes.length;
+                fileOwner.textContent = `Por: ${file.userName}`;
+                fileDate.textContent = new Date(file.uploadDate).toLocaleString();
+                
+                // Mostrar botón de eliminar solo para el propietario o desarrollador
+                deleteBtn.style.display = (file.userEmail === currentUser.email || currentUser.isDeveloper) ? 'block' : 'none';
+                
+                // Configurar botón de like
+                const isLiked = file.likes.includes(currentUser.email);
+                likeBtn.className = isLiked ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
+                
+                // Mostrar botón de descarga solo si es público, compartido o el usuario es el propietario
+                const canDownload = file.visibility === 'public' || 
+                                  file.sharedWith.includes(currentUser.email) || 
+                                  file.userEmail === currentUser.email;
+                downloadBtn.style.display = canDownload ? 'block' : 'none';
+                
+                fileModal.show();
+            })
+            .catch(error => {
+                console.error('Error al cargar archivo:', error);
+                showToast('Error', 'No se pudo cargar el archivo', true);
             });
-        });
-        
-        document.querySelectorAll('.download-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                downloadFile(this.dataset.fileId);
-            });
-        });
-        
-        document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                viewFile(this.dataset.fileId);
-            });
-        });
-        
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                showConfirmModal(
-                    'Eliminar archivo',
-                    '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.',
-                    () => deleteFile(this.dataset.fileId)
-                );
-            });
-        });
     }
     
-    // Manejar creación de carpetas
-    document.getElementById('createFolderBtn').addEventListener('click', function() {
-        document.getElementById('folderName').value = '';
-        document.getElementById('folderPrivacy').value = 'public';
-        folderModal.show();
-    });
+    // Alternar like en un archivo
+    function toggleLike(fileId) {
+        getFileById(fileId)
+            .then(file => {
+                const likes = [...file.likes];
+                const userIndex = likes.indexOf(currentUser.email);
+                
+                if (userIndex === -1) {
+                    likes.push(currentUser.email);
+                } else {
+                    likes.splice(userIndex, 1);
+                }
+                
+                return updateFile(fileId, { likes });
+            })
+            .then(() => {
+                // Actualizar vista si el modal está abierto
+                if (currentFileView && currentFileView.id === fileId) {
+                    viewFile(fileId);
+                }
+                
+                // Recargar la galería si está activa
+                if (document.getElementById('galleryModule').classList.contains('active')) {
+                    loadGalleryFiles();
+                }
+            })
+            .catch(error => {
+                console.error('Error al actualizar like:', error);
+                showToast('Error', 'No se pudo actualizar el like', true);
+            });
+    }
     
-    document.getElementById('saveFolderBtn').addEventListener('click', function() {
-        const folderName = document.getElementById('folderName').value.trim();
-        const privacy = document.getElementById('folderPrivacy').value;
+    // Descargar archivo
+    function downloadFile(fileId) {
+        getFileById(fileId)
+            .then(file => {
+                // Incrementar contador de descargas
+                return updateFile(fileId, { downloads: file.downloads + 1 });
+            })
+            .then(file => {
+                const link = document.createElement('a');
+                link.href = `data:${file.type === 'image' ? 'image/jpeg' : 'video/mp4'};base64,${file.data}`;
+                link.download = file.name;
+                link.click();
+                
+                showToast('Éxito', 'Descarga iniciada');
+            })
+            .catch(error => {
+                console.error('Error al descargar archivo:', error);
+                showToast('Error', 'No se pudo descargar el archivo', true);
+            });
+    }
+    
+    // Eliminar archivo
+    function deleteFile(fileId) {
+        deleteFileFromDB(fileId)
+            .then(() => {
+                showToast('Éxito', 'Archivo eliminado correctamente');
+                fileModal.hide();
+                
+                // Recargar la galería si está activa
+                if (document.getElementById('galleryModule').classList.contains('active')) {
+                    loadGalleryFiles();
+                }
+            })
+            .catch(error => {
+                console.error('Error al eliminar archivo:', error);
+                showToast('Error', 'No se pudo eliminar el archivo', true);
+            });
+    }
+    
+    // Cargar usuarios para compartir
+    function loadUsersForSharing() {
+        const shareUserSelect = document.getElementById('shareUser');
         
-        if (!folderName) {
-            showToast('Error', 'Debes ingresar un nombre para la carpeta', true);
+        shareUserSelect.innerHTML = `
+            <option value="" selected disabled>Cargando usuarios...</option>
+        `;
+        
+        getAllUsers()
+            .then(users => {
+                // Filtrar usuarios (excluyendo al usuario actual y usuarios desactivados)
+                users = users.filter(user => 
+                    user.email !== currentUser.email && 
+                    user.isActive &&
+                    (!currentUser.isDeveloper || user.isDeveloper !== true) // Desarrolladores no pueden compartir con otros desarrolladores
+                );
+                
+                if (users.length === 0) {
+                    shareUserSelect.innerHTML = `
+                        <option value="" selected disabled>No hay usuarios disponibles</option>
+                    `;
+                    return;
+                }
+                
+                shareUserSelect.innerHTML = `
+                    <option value="" selected disabled>Selecciona un usuario</option>
+                    ${users.map(user => `
+                        <option value="${user.email}">${user.fullName} (${user.email})</option>
+                    `).join('')}
+                `;
+            })
+            .catch(error => {
+                console.error('Error al cargar usuarios:', error);
+                shareUserSelect.innerHTML = `
+                    <option value="" selected disabled>Error al cargar usuarios</option>
+                `;
+            });
+    }
+    
+    // Cargar archivos del usuario para compartir
+    function loadUserFilesForSharing() {
+        const shareFileSelect = document.getElementById('shareFile');
+        
+        shareFileSelect.innerHTML = `
+            <option value="" selected disabled>Cargando tus archivos...</option>
+        `;
+        
+        getUserFiles(currentUser.email)
+            .then(files => {
+                if (files.length === 0) {
+                    shareFileSelect.innerHTML = `
+                        <option value="" selected disabled>No tienes archivos para compartir</option>
+                    `;
+                    return;
+                }
+                
+                shareFileSelect.innerHTML = `
+                    <option value="" selected disabled>Selecciona un archivo</option>
+                    ${files.map(file => `
+                        <option value="${file.id}">${file.name} (${new Date(file.uploadDate).toLocaleDateString()})</option>
+                    `).join('')}
+                `;
+                
+                // Habilitar botón de compartir si hay archivos
+                document.getElementById('shareBtn').disabled = files.length === 0;
+            })
+            .catch(error => {
+                console.error('Error al cargar archivos:', error);
+                shareFileSelect.innerHTML = `
+                    <option value="" selected disabled>Error al cargar archivos</option>
+                `;
+            });
+    }
+    
+    // Compartir archivo con otro usuario
+    function shareFile() {
+        const shareUser = document.getElementById('shareUser').value;
+        const shareFile = document.getElementById('shareFile').value;
+        const shareMessage = document.getElementById('shareMessage').value;
+        
+        if (!shareUser || !shareFile) {
+            showToast('Error', 'Debes seleccionar un usuario y un archivo', true);
             return;
         }
         
-        const newFolder = {
-            id: Date.now(),
-            name: folderName,
-            creator: currentUser.email,
-            privacy: privacy,
-            createdAt: new Date().toISOString(),
-            lastChecked: new Date().toISOString(),
-            files: []
-        };
-        
-        saveFolder(newFolder)
-            .then(() => {
-                folderModal.hide();
-                showToast('Éxito', 'Carpeta creada correctamente');
-                loadUserFolders();
-            })
-            .catch(error => {
-                showToast('Error', 'No se pudo crear la carpeta', true);
-            });
-    });
-    
-    // Verificar y eliminar carpetas vacías cada 24 horas
-    function checkEmptyFolders() {
-        getAllFolders()
-            .then(allFolders => {
-                const now = new Date();
-                const twentyFourHours = 24 * 60 * 60 * 1000;
+        getFileById(shareFile)
+            .then(file => {
+                // Verificar que el archivo no esté ya compartido con este usuario
+                if (file.sharedWith.includes(shareUser)) {
+                    throw new Error('Este archivo ya ha sido compartido con el usuario seleccionado');
+                }
                 
-                allFolders.forEach(folder => {
-                    // Solo verificar carpetas vacías
-                    if (folder.files.length === 0) {
-                        const lastChecked = new Date(folder.lastChecked);
-                        const timeDiff = now - lastChecked;
-                        
-                        // Si han pasado más de 24 horas desde la última verificación
-                        if (timeDiff > twentyFourHours) {
-                            deleteFolder(folder.id)
-                                .then(() => {
-                                    console.log(`Carpeta ${folder.name} eliminada por estar vacía más de 24 horas`);
-                                })
-                                .catch(error => {
-                                    console.error('Error al eliminar carpeta vacía:', error);
-                                });
-                        } else {
-                            // Actualizar lastChecked si no ha pasado 24 horas
-                            updateFolder(folder.id, { lastChecked: new Date().toISOString() });
-                        }
-                    }
-                });
+                // Agregar usuario a la lista de compartidos
+                const sharedWith = [...file.sharedWith, shareUser];
+                return updateFile(file.id, { sharedWith });
+            })
+            .then(() => {
+                showToast('Éxito', 'Archivo compartido correctamente');
+                
+                // Limpiar formulario
+                document.getElementById('shareMessage').value = '';
+                
+                // Recargar archivos compartidos
+                loadSharedFiles();
             })
             .catch(error => {
-                console.error('Error al verificar carpetas vacías:', error);
+                console.error('Error al compartir archivo:', error);
+                showToast('Error', error.message || 'No se pudo compartir el archivo', true);
             });
     }
     
-    // Ejecutar cada hora
-    setInterval(checkEmptyFolders, 60 * 60 * 1000);
+    // Cargar archivos compartidos con el usuario actual
+    function loadSharedFiles() {
+        const sharedFilesTable = document.querySelector('#sharedFilesTable tbody');
+        
+        sharedFilesTable.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        getAllFiles()
+            .then(files => {
+                // Filtrar archivos compartidos con el usuario actual
+                const sharedFiles = files.filter(file => 
+                    file.sharedWith.includes(currentUser.email)
+                );
+                
+                if (sharedFiles.length === 0) {
+                    sharedFilesTable.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center py-4">
+                                <i class="bi bi-folder-x display-6 text-muted"></i>
+                                <p class="mt-2">No tienes archivos compartidos</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                sharedFilesTable.innerHTML = '';
+                
+                sharedFiles.forEach(file => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${file.name}</td>
+                        <td>${file.userName}</td>
+                        <td>${new Date(file.uploadDate).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary view-shared-btn" data-file-id="${file.id}">
+                                <i class="bi bi-eye"></i> Ver
+                            </button>
+                        </td>
+                    `;
+                    
+                    sharedFilesTable.appendChild(row);
+                });
+                
+                // Agregar event listeners a los botones
+                document.querySelectorAll('.view-shared-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        viewFile(this.dataset.fileId);
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar archivos compartidos:', error);
+                sharedFilesTable.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4">
+                            <i class="bi bi-exclamation-triangle display-6 text-danger"></i>
+                            <p class="mt-2">Error al cargar archivos compartidos</p>
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+    
+    // Cargar usuarios para gestión (solo desarrollador)
+    function loadUsersForManagement() {
+        const usersTable = document.querySelector('#usersTable tbody');
+        
+        usersTable.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        getAllUsers()
+            .then(users => {
+                // Ordenar usuarios por fecha de creación
+                users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                if (users.length === 0) {
+                    usersTable.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="bi bi-people display-6 text-muted"></i>
+                                <p class="mt-2">No hay usuarios registrados</p>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                usersTable.innerHTML = '';
+                
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${user.fullName}</td>
+                        <td>${user.email}</td>
+                        <td>${user.country}</td>
+                        <td>${user.phone}</td>
+                        <td>
+                            <span class="badge ${user.isActive ? 'bg-success' : 'bg-danger'}">
+                                ${user.isActive ? 'Activo' : 'Inactivo'}
+                            </span>
+                            ${user.isDeveloper ? '<span class="badge bg-primary ms-1">Desarrollador</span>' : ''}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary edit-user-btn" data-user-email="${user.email}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn ${user.isActive ? 'btn-outline-danger' : 'btn-outline-success'} toggle-user-btn" data-user-email="${user.email}">
+                                    <i class="bi ${user.isActive ? 'bi-lock' : 'bi-unlock'}"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    usersTable.appendChild(row);
+                });
+                
+                // Agregar event listeners a los botones
+                document.querySelectorAll('.edit-user-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        editUser(this.dataset.userEmail);
+                    });
+                });
+                
+                document.querySelectorAll('.toggle-user-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        toggleUserStatus(this.dataset.userEmail);
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar usuarios:', error);
+                usersTable.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="bi bi-exclamation-triangle display-6 text-danger"></i>
+                            <p class="mt-2">Error al cargar usuarios</p>
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+    
+    // Editar usuario (solo desarrollador)
+    function editUser(userEmail) {
+        showToast('Información', 'La edición de usuarios está en desarrollo', false);
+    }
+    
+    // Alternar estado de usuario (activo/inactivo)
+    function toggleUserStatus(userEmail) {
+        getUserByEmail(userEmail)
+            .then(user => {
+                return updateUser(userEmail, { isActive: !user.isActive });
+            })
+            .then(() => {
+                showToast('Éxito', 'Estado de usuario actualizado');
+                loadUsersForManagement();
+            })
+            .catch(error => {
+                console.error('Error al actualizar usuario:', error);
+                showToast('Error', 'No se pudo actualizar el usuario', true);
+            });
+    }
+    
+    // Mostrar modal de confirmación
+    function showConfirmModal(title, message, action) {
+        document.getElementById('confirmModalTitle').textContent = title;
+        document.getElementById('confirmModalBody').textContent = message;
+        currentAction = action;
+        confirmModal.show();
+    }
     
     // Inicializar IndexedDB
     let db;
     const DB_NAME = 'mYpuB_DB';
-    const DB_VERSION = 3; // Versión incrementada por cambios en el esquema
+    const DB_VERSION = 3; // Incrementado para manejar cambios en el esquema (añadir carpetas)
     const USER_STORE = 'users';
     const FILE_STORE = 'files';
     const FOLDER_STORE = 'folders';
@@ -668,6 +1395,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             request.onsuccess = function(event) {
                 db = event.target.result;
+                
+                // Verificar carpetas vacías periódicamente
+                setInterval(checkEmptyFolders, 60 * 60 * 1000); // Cada hora
+                
                 resolve(db);
             };
             
@@ -692,28 +1423,357 @@ document.addEventListener('DOMContentLoaded', function() {
                     fileStore.createIndex('folderId', 'folderId', { unique: false });
                 }
                 
-                // Crear almacén de carpetas
+                // Crear almacén de carpetas (nuevo en versión 3)
                 if (!db.objectStoreNames.contains(FOLDER_STORE)) {
-                    const folderStore = db.createObjectStore(FOLDER_STORE, { keyPath: 'id' });
-                    folderStore.createIndex('creator', 'creator', { unique: false });
-                    folderStore.createIndex('privacy', 'privacy', { unique: false });
+                    const folderStore = db.createObjectStore(FOLDER_STORE, { keyPath: 'id', autoIncrement: true });
+                    folderStore.createIndex('userEmail', 'userEmail', { unique: false });
+                    folderStore.createIndex('createdAt', 'createdAt', { unique: false });
                 }
             };
         });
     }
     
+    // Operaciones CRUD para usuarios
+    function registerUser(user) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([USER_STORE], 'readwrite');
+                    const store = transaction.objectStore(USER_STORE);
+                    
+                    const request = store.add(user);
+                    
+                    request.onsuccess = function() {
+                        resolve();
+                    };
+                    
+                    request.onerror = function(event) {
+                        if (event.target.error.name === 'ConstraintError') {
+                            reject('El correo electrónico ya está registrado');
+                        } else {
+                            reject('Error al registrar el usuario');
+                        }
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function loginUser(email, password) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([USER_STORE], 'readonly');
+                    const store = transaction.objectStore(USER_STORE);
+                    
+                    const request = store.get(email);
+                    
+                    request.onsuccess = function() {
+                        const user = request.result;
+                        
+                        if (user && user.password === password) {
+                            resolve(user);
+                        } else {
+                            reject('Credenciales incorrectas');
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al buscar usuario');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function getAllUsers() {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([USER_STORE], 'readonly');
+                    const store = transaction.objectStore(USER_STORE);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = function() {
+                        resolve(request.result);
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al obtener usuarios');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function getUserByEmail(email) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([USER_STORE], 'readonly');
+                    const store = transaction.objectStore(USER_STORE);
+                    const request = store.get(email);
+                    
+                    request.onsuccess = function() {
+                        if (request.result) {
+                            resolve(request.result);
+                        } else {
+                            reject('Usuario no encontrado');
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al buscar usuario');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function updateUser(email, updates) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([USER_STORE], 'readwrite');
+                    const store = transaction.objectStore(USER_STORE);
+                    
+                    // Primero obtener el usuario actual
+                    const getRequest = store.get(email);
+                    
+                    getRequest.onsuccess = function() {
+                        const user = getRequest.result;
+                        if (!user) {
+                            reject('Usuario no encontrado');
+                            return;
+                        }
+                        
+                        // Actualizar propiedades
+                        const updatedUser = { ...user, ...updates };
+                        
+                        // Guardar cambios
+                        const putRequest = store.put(updatedUser);
+                        
+                        putRequest.onsuccess = function() {
+                            resolve(updatedUser);
+                        };
+                        
+                        putRequest.onerror = function() {
+                            reject('Error al actualizar usuario');
+                        };
+                    };
+                    
+                    getRequest.onerror = function() {
+                        reject('Error al obtener usuario');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    // Operaciones CRUD para archivos
+    function saveFile(fileData) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FILE_STORE], 'readwrite');
+                    const store = transaction.objectStore(FILE_STORE);
+                    
+                    const request = store.add(fileData);
+                    
+                    request.onsuccess = function() {
+                        resolve(request.result);
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al guardar archivo');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function getAllFiles() {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FILE_STORE], 'readonly');
+                    const store = transaction.objectStore(FILE_STORE);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = function() {
+                        resolve(request.result);
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al obtener archivos');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function getUserFiles(userEmail) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FILE_STORE], 'readonly');
+                    const store = transaction.objectStore(FILE_STORE);
+                    const index = store.index('userEmail');
+                    const request = index.getAll(userEmail);
+                    
+                    request.onsuccess = function() {
+                        resolve(request.result);
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al obtener archivos del usuario');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function getFilesInFolder(folderId) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FILE_STORE], 'readonly');
+                    const store = transaction.objectStore(FILE_STORE);
+                    const index = store.index('folderId');
+                    const request = index.getAll(folderId);
+                    
+                    request.onsuccess = function() {
+                        resolve(request.result);
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al obtener archivos de la carpeta');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function getFileById(fileId) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FILE_STORE], 'readonly');
+                    const store = transaction.objectStore(FILE_STORE);
+                    const request = store.get(parseInt(fileId));
+                    
+                    request.onsuccess = function() {
+                        if (request.result) {
+                            resolve(request.result);
+                        } else {
+                            reject('Archivo no encontrado');
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al buscar archivo');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function updateFile(fileId, updates) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FILE_STORE], 'readwrite');
+                    const store = transaction.objectStore(FILE_STORE);
+                    
+                    // Primero obtener el archivo actual
+                    const getRequest = store.get(parseInt(fileId));
+                    
+                    getRequest.onsuccess = function() {
+                        const file = getRequest.result;
+                        if (!file) {
+                            reject('Archivo no encontrado');
+                            return;
+                        }
+                        
+                        // Actualizar propiedades
+                        const updatedFile = { ...file, ...updates };
+                        
+                        // Guardar cambios
+                        const putRequest = store.put(updatedFile);
+                        
+                        putRequest.onsuccess = function() {
+                            resolve(updatedFile);
+                        };
+                        
+                        putRequest.onerror = function() {
+                            reject('Error al actualizar archivo');
+                        };
+                    };
+                    
+                    getRequest.onerror = function() {
+                        reject('Error al obtener archivo');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
+    function deleteFileFromDB(fileId) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FILE_STORE], 'readwrite');
+                    const store = transaction.objectStore(FILE_STORE);
+                    const request = store.delete(parseInt(fileId));
+                    
+                    request.onsuccess = function() {
+                        resolve();
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al eliminar archivo');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
     // Operaciones CRUD para carpetas
-    function saveFolder(folder) {
+    function saveFolder(folderData) {
         return new Promise((resolve, reject) => {
             initDB()
                 .then(db => {
                     const transaction = db.transaction([FOLDER_STORE], 'readwrite');
                     const store = transaction.objectStore(FOLDER_STORE);
                     
-                    const request = store.add(folder);
+                    const request = store.add(folderData);
                     
                     request.onsuccess = function() {
-                        resolve();
+                        resolve(request.result);
                     };
                     
                     request.onerror = function() {
@@ -754,7 +1814,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(db => {
                     const transaction = db.transaction([FOLDER_STORE], 'readonly');
                     const store = transaction.objectStore(FOLDER_STORE);
-                    const index = store.index('creator');
+                    const index = store.index('userEmail');
                     const request = index.getAll(userEmail);
                     
                     request.onsuccess = function() {
@@ -771,6 +1831,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    function getFolderById(folderId) {
+        return new Promise((resolve, reject) => {
+            initDB()
+                .then(db => {
+                    const transaction = db.transaction([FOLDER_STORE], 'readonly');
+                    const store = transaction.objectStore(FOLDER_STORE);
+                    const request = store.get(parseInt(folderId));
+                    
+                    request.onsuccess = function() {
+                        if (request.result) {
+                            resolve(request.result);
+                        } else {
+                            reject('Carpeta no encontrada');
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        reject('Error al buscar carpeta');
+                    };
+                })
+                .catch(error => {
+                    reject(error);
+                });
+        });
+    }
+    
     function updateFolder(folderId, updates) {
         return new Promise((resolve, reject) => {
             initDB()
@@ -779,7 +1865,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const store = transaction.objectStore(FOLDER_STORE);
                     
                     // Primero obtener la carpeta actual
-                    const getRequest = store.get(folderId);
+                    const getRequest = store.get(parseInt(folderId));
                     
                     getRequest.onsuccess = function() {
                         const folder = getRequest.result;
@@ -819,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(db => {
                     const transaction = db.transaction([FOLDER_STORE], 'readwrite');
                     const store = transaction.objectStore(FOLDER_STORE);
-                    const request = store.delete(folderId);
+                    const request = store.delete(parseInt(folderId));
                     
                     request.onsuccess = function() {
                         resolve();
@@ -835,28 +1921,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // ... (resto de las funciones CRUD para usuarios y archivos se mantienen igual)
-    
-    // Inicializar la aplicación
-    initDB().then(() => {
-        // Configurar event listeners para el cambio de país
-        document.getElementById('country').addEventListener('change', updatePhonePrefix);
-        
-        // Configurar otros event listeners
-        document.getElementById('logoutBtn').addEventListener('click', logoutUser);
-        
-        // Configurar navegación entre módulos
-        document.querySelectorAll('[data-module]').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                switchModule(this.dataset.module);
-            });
-        });
-        
-        // Iniciar verificación de carpetas vacías
-        checkEmptyFolders();
-    }).catch(error => {
-        console.error('Error al inicializar la aplicación:', error);
+    // Inicializar la base de datos al cargar la aplicación
+    initDB().catch(error => {
+        console.error('Error al inicializar la base de datos:', error);
         showToast('Error', 'Hubo un problema al inicializar la aplicación', true);
     });
 });
