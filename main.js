@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     country: document.getElementById('country').value,
                     phone: document.getElementById('phone').value,
                     password: document.getElementById('password').value,
-                    isDeveloper: document.getElementById('password').value.startsWith('Mpteen'),
+                    isDeveloper: document.getElementById('password').value === 'Mpteen2025@&',
                     createdAt: new Date().toISOString(),
                     isActive: true
                 };
@@ -105,8 +105,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error al inicializar la base de datos:', error);
         showToast('Error', 'Hubo un problema al inicializar la aplicación', true);
     });
-    
-    // Resto del código...
     
     // Función para cargar lista física de países
     function loadCountries() {
@@ -241,26 +239,27 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Expresión regular para contraseña normal
         const normalPasswordRegex = /^(?=.*[A-Z])(?=.*[a-z]{5,})(?=.*\d{4,})(?=.*[@#&]{2,}).{12,}$/;
-        // Expresión regular para desarrolladores (Mpteen seguido de los mismos requisitos)
-        const devPasswordRegex = /^Mpteen(?=.*[A-Z])(?=.*[a-z])(?=.*\d{4,})(?=.*[@#&]{2,}).{12,}$/;
+        // Contraseña especial para desarrollador
+        const devPassword = 'Mpteen2025@&';
         
         let isValid = false;
         let isDev = false;
         let strength = 0;
         
         // Verificar si es contraseña de desarrollador
-        if (password.startsWith('Mpteen')) {
-            isDev = devPasswordRegex.test(password);
-            isValid = isDev;
+        if (password === devPassword) {
+            isValid = true;
+            isDev = true;
+            strength = 5;
         } else {
             isValid = normalPasswordRegex.test(password);
+            
+            // Calcular fortaleza de la contraseña (simplificado)
+            if (password.length >= 12) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/\d/.test(password)) strength++;
+            if (/[@#&]/.test(password)) strength++;
         }
-        
-        // Calcular fortaleza de la contraseña (simplificado)
-        if (password.length >= 12) strength++;
-        if (/[A-Z]/.test(password)) strength++;
-        if (/\d/.test(password)) strength++;
-        if (/[@#&]/.test(password)) strength++;
         
         // Actualizar barra de fortaleza
         passwordStrength.className = `password-strength strength-${strength}`;
@@ -381,9 +380,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
                 
             case 'info':
-                // No necesita carga adicional
+                loadInfoContent();
                 break;
         }
+    }
+    
+    // Cargar contenido del módulo de información
+    function loadInfoContent() {
+        const infoContent = document.getElementById('infoContent');
+        
+        infoContent.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Información sobre mYpuB</h4>
+                    <div class="card-text">
+                        <p>mYpuB es una aplicación web para compartir archivos multimedia de manera segura y privada.</p>
+                        
+                        <h5>Características principales:</h5>
+                        <ul>
+                            <li>Subida de imágenes y vídeos</li>
+                            <li>Organización en carpetas</li>
+                            <li>Compartir archivos con otros usuarios</li>
+                            <li>Galería personalizada</li>
+                            <li>Sistema de likes</li>
+                        </ul>
+                        
+                        <h5>Requisitos del sistema:</h5>
+                        <ul>
+                            <li>Navegador moderno (Chrome, Firefox, Edge, Safari)</li>
+                            <li>Conexión a Internet</li>
+                            <li>JavaScript habilitado</li>
+                        </ul>
+                        
+                        <h5>Desarrollador:</h5>
+                        <p>Esta aplicación fue desarrollada por Enze M. como proyecto personal.</p>
+                        
+                        <h5>Contacto:</h5>
+                        <p>Para soporte técnico o preguntas, utiliza el botón de ayuda en la esquina superior derecha.</p>
+                        
+                        <h5>Versión:</h5>
+                        <p>1.0.0 (Julio 2025)</p>
+                    </div>
+                </div>
+            </div>
+        `;
     }
     
     // Inicializar IndexedDB
@@ -430,6 +470,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     fileStore.createIndex('visibility', 'visibility', { unique: false });
                     fileStore.createIndex('uploadDate', 'uploadDate', { unique: false });
                     fileStore.createIndex('folderId', 'folderId', { unique: false });
+                    
+                    // Agregar índices para compartir y likes
+                    fileStore.createIndex('sharedWith', 'sharedWith', { multiEntry: true });
+                    fileStore.createIndex('likes', 'likes', { multiEntry: true });
                 }
                 
                 // Crear almacén de carpetas (nuevo en versión 3)
@@ -496,8 +540,6 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         });
     }
-    
-    // Resto de funciones CRUD para usuarios, archivos y carpetas...
     
     // Manejar el botón de ayuda
     const helpBtn = document.getElementById('helpBtn');
@@ -867,7 +909,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (file.visibility === 'public') return true;
                     
                     // Mostrar archivos compartidos con el usuario
-                    if (file.sharedWith.includes(currentUser.email)) return true;
+                    if (file.sharedWith && file.sharedWith.includes(currentUser.email)) return true;
                     
                     return false;
                 });
@@ -896,24 +938,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     let thumbnailContent = '';
                     if (file.type === 'image') {
-                        thumbnailContent = `<img src="data:image/jpeg;base64,${file.data}" class="file-thumbnail card-img-top" alt="${file.name}">`;
+                        thumbnailContent = `<img src="data:image/jpeg;base64,${file.data}" class="file-thumbnail card-img-top" alt="${file.name}" style="height: 200px; object-fit: cover;">`;
                     } else {
                         thumbnailContent = `
-                            <div class="video-thumbnail">
-                                <img src="data:image/jpeg;base64,${file.data}" class="file-thumbnail card-img-top" alt="${file.name}">
-                                <i class="bi bi-play-circle video-play-icon"></i>
+                            <div class="video-thumbnail" style="position: relative; height: 200px;">
+                                <img src="data:image/jpeg;base64,${file.data}" class="file-thumbnail card-img-top" alt="${file.name}" style="height: 100%; width: 100%; object-fit: cover;">
+                                <i class="bi bi-play-circle video-play-icon" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; color: white;"></i>
                             </div>
                         `;
                     }
                     
-                    const isLiked = file.likes.includes(currentUser.email);
+                    const isLiked = file.likes && file.likes.includes(currentUser.email);
                     const isOwner = file.userEmail === currentUser.email;
                     
                     // Mostrar icono de privacidad
                     let privacyIcon = '';
                     if (file.visibility === 'private') {
                         privacyIcon = '<i class="bi bi-lock-fill text-danger ms-1" title="Privado"></i>';
-                    } else if (file.sharedWith.length > 0) {
+                    } else if (file.sharedWith && file.sharedWith.length > 0) {
                         privacyIcon = '<i class="bi bi-people-fill text-primary ms-1" title="Compartido"></i>';
                     }
                     
@@ -926,7 +968,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="file-actions">
                                 <div>
                                     <button class="btn btn-sm ${isLiked ? 'btn-primary' : 'btn-outline-primary'} like-btn" data-file-id="${file.id}">
-                                        <i class="bi bi-hand-thumbs-up"></i> ${file.likes.length}
+                                        <i class="bi bi-hand-thumbs-up"></i> ${file.likes ? file.likes.length : 0}
                                     </button>
                                     ${file.visibility === 'public' || isOwner ? `
                                         <button class="btn btn-sm btn-outline-success download-btn ms-2" data-file-id="${file.id}">
@@ -1018,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
                 }
                 
-                likesCount.textContent = file.likes.length;
+                likesCount.textContent = file.likes ? file.likes.length : 0;
                 fileOwner.textContent = `Por: ${file.userName}`;
                 fileDate.textContent = new Date(file.uploadDate).toLocaleString();
                 
@@ -1026,12 +1068,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 deleteBtn.style.display = (file.userEmail === currentUser.email || currentUser.isDeveloper) ? 'block' : 'none';
                 
                 // Configurar botón de like
-                const isLiked = file.likes.includes(currentUser.email);
+                const isLiked = file.likes && file.likes.includes(currentUser.email);
                 likeBtn.className = isLiked ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
                 
                 // Mostrar botón de descarga solo si es público, compartido o el usuario es el propietario
                 const canDownload = file.visibility === 'public' || 
-                                  file.sharedWith.includes(currentUser.email) || 
+                                  (file.sharedWith && file.sharedWith.includes(currentUser.email)) || 
                                   file.userEmail === currentUser.email;
                 downloadBtn.style.display = canDownload ? 'block' : 'none';
                 
@@ -1047,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleLike(fileId) {
         getFileById(fileId)
             .then(file => {
-                const likes = [...file.likes];
+                const likes = file.likes ? [...file.likes] : [];
                 const userIndex = likes.indexOf(currentUser.email);
                 
                 if (userIndex === -1) {
@@ -1080,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', function() {
         getFileById(fileId)
             .then(file => {
                 // Incrementar contador de descargas
-                return updateFile(fileId, { downloads: file.downloads + 1 });
+                return updateFile(fileId, { downloads: (file.downloads || 0) + 1 });
             })
             .then(file => {
                 const link = document.createElement('a');
@@ -1127,8 +1169,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Filtrar usuarios (excluyendo al usuario actual y usuarios desactivados)
                 users = users.filter(user => 
                     user.email !== currentUser.email && 
-                    user.isActive &&
-                    (!currentUser.isDeveloper || user.isDeveloper !== true) // Desarrolladores no pueden compartir con otros desarrolladores
+                    user.isActive
                 );
                 
                 if (users.length === 0) {
@@ -1202,12 +1243,12 @@ document.addEventListener('DOMContentLoaded', function() {
         getFileById(shareFile)
             .then(file => {
                 // Verificar que el archivo no esté ya compartido con este usuario
-                if (file.sharedWith.includes(shareUser)) {
+                if (file.sharedWith && file.sharedWith.includes(shareUser)) {
                     throw new Error('Este archivo ya ha sido compartido con el usuario seleccionado');
                 }
                 
                 // Agregar usuario a la lista de compartidos
-                const sharedWith = [...file.sharedWith, shareUser];
+                const sharedWith = file.sharedWith ? [...file.sharedWith, shareUser] : [shareUser];
                 return updateFile(file.id, { sharedWith });
             })
             .then(() => {
@@ -1243,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(files => {
                 // Filtrar archivos compartidos con el usuario actual
                 const sharedFiles = files.filter(file => 
-                    file.sharedWith.includes(currentUser.email)
+                    file.sharedWith && file.sharedWith.includes(currentUser.email)
                 );
                 
                 if (sharedFiles.length === 0) {
@@ -1827,6 +1868,107 @@ document.addEventListener('DOMContentLoaded', function() {
             request.onerror = function() {
                 reject('Error al eliminar carpeta');
             };
+        });
+    }
+    
+    // Función para manejar la selección de archivos
+    function handleFileSelection(files) {
+        selectedFiles = Array.from(files);
+        
+        // Validar archivos seleccionados
+        const validFiles = selectedFiles.filter(file => {
+            const isImage = file.type.startsWith('image/');
+            const isVideo = file.type.startsWith('video/');
+            
+            return isImage || isVideo;
+        });
+        
+        if (validFiles.length !== selectedFiles.length) {
+            showToast('Advertencia', 'Algunos archivos no son imágenes o vídeos y no serán subidos', true);
+            selectedFiles = validFiles;
+        }
+        
+        // Actualizar interfaz
+        if (selectedFiles.length > 0) {
+            document.getElementById('uploadStatus').textContent = `${selectedFiles.length} archivo(s) seleccionado(s)`;
+            uploadFilesBtn.disabled = false;
+        } else {
+            document.getElementById('uploadStatus').textContent = 'No hay archivos seleccionados';
+            uploadFilesBtn.disabled = true;
+        }
+    }
+    
+    // Función para subir archivos seleccionados
+    function uploadSelectedFiles() {
+        if (selectedFiles.length === 0) {
+            showToast('Error', 'No hay archivos seleccionados para subir', true);
+            return;
+        }
+        
+        const progressBar = document.getElementById('uploadProgressBar');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const uploadStatus = document.getElementById('uploadStatus');
+        
+        uploadProgress.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.setAttribute('aria-valuenow', 0);
+        uploadStatus.textContent = 'Subiendo archivos...';
+        uploadFilesBtn.disabled = true;
+        
+        let uploadedCount = 0;
+        
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const fileData = e.target.result.split(',')[1]; // Obtener solo los datos base64
+                const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+                
+                const fileObj = {
+                    name: file.name,
+                    type: fileType,
+                    data: fileData,
+                    userEmail: currentUser.email,
+                    userName: currentUser.fullName,
+                    uploadDate: new Date().toISOString(),
+                    visibility: 'public',
+                    likes: [],
+                    sharedWith: [],
+                    downloads: 0,
+                    folderId: currentFolder || null
+                };
+                
+                saveFile(fileObj)
+                    .then(() => {
+                        uploadedCount++;
+                        
+                        // Actualizar progreso
+                        const progress = Math.round((uploadedCount / selectedFiles.length) * 100);
+                        progressBar.style.width = `${progress}%`;
+                        progressBar.setAttribute('aria-valuenow', progress);
+                        
+                        if (uploadedCount === selectedFiles.length) {
+                            uploadStatus.textContent = '¡Subida completada!';
+                            showToast('Éxito', 'Archivos subidos correctamente');
+                            
+                            // Resetear selección
+                            selectedFiles = [];
+                            fileInput.value = '';
+                            
+                            // Recargar galería si está activa
+                            if (document.getElementById('galleryModule').classList.contains('active')) {
+                                loadGalleryFiles();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al guardar archivo:', error);
+                        uploadStatus.textContent = 'Error al subir archivos';
+                        showToast('Error', 'Hubo un problema al subir los archivos', true);
+                    });
+            };
+            
+            reader.readAsDataURL(file);
         });
     }
 });
