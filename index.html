@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mYpuB - Sube y comparte tus imágenes y videos</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #6c5ce7;
+            --secondary-color: #a29bfe;
+            --dark-color: #2d3436;
+            --light-color: #f5f6fa;
+            --success-color: #00b894;
+            --danger-color: #d63031;
+            --warning-color: #fdcb6e;
+            --info-color: #0984e3;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .auth-container {
+            max-width: 600px;
+            margin: 5rem auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        .auth-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .auth-body {
+            background-color: white;
+            padding: 2rem;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.25rem rgba(108, 92, 231, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #5a4bd1;
+            border-color: #5a4bd1;
+        }
+        
+        .help-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1050;
+            width: 90%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+        }
+        
+        .help-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+        }
+        
+        .password-strength {
+            height: 5px;
+            margin-top: 5px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .strength-0 {
+            width: 0%;
+            background-color: var(--danger-color);
+        }
+        
+        .strength-1 {
+            width: 25%;
+            background-color: #ff7675;
+        }
+        
+        .strength-2 {
+            width: 50%;
+            background-color: #fdcb6e;
+        }
+        
+        .strength-3 {
+            width: 75%;
+            background-color: #55efc4;
+        }
+        
+        .strength-4 {
+            width: 100%;
+            background-color: var(--success-color);
+        }
+        
+        /* Animaciones */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        /* Panel principal oculto inicialmente */
+        #mainPanel {
+            display: none;
+        }
+        
+        /* Estilos para la barra de navegación */
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        /* Estilos para las tarjetas de archivos */
+        .file-card {
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .file-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .file-thumbnail {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px 5px 0 0;
+        }
+        
+        .video-thumbnail {
+            position: relative;
+        }
+        
+        .video-play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: white;
+            opacity: 0.8;
+        }
+        
+        .file-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .like-count {
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        /* Dropzone para subir archivos */
+        .dropzone {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dropzone:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(108, 92, 231, 0.05);
+        }
+        
+        .dropzone.active {
+            border-color: var(--success-color);
+            background-color: rgba(0, 184, 148, 0.05);
+        }
+        
+        /* Pestañas del panel principal */
+        .module-tab {
+            display: none;
+        }
+        
+        .module-tab.active {
+            display: block;
+        }
+        
+        /* Estilos para el modal de compartir */
+        .share-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1050;
+            width: 90%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+        }
+        
+        .share-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+        }
+        
+        /* Estilos para carpetas */
+        .folder-card {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .folder-card:hover {
+            transform: scale(1.03);
+        }
+        
+        .folder-icon {
+            font-size: 3rem;
+            color: #ffc107;
+        }
+        
+        /* Badges de privacidad */
+        .privacy-badge {
+            font-size: 0.75rem;
+        }
+        
+        /* Toast para mensajes */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1100;
+        }
+    </style>
+</head>
+<body>
+    <!-- Panel de Autenticación -->
+    <div id="authPanel">
+        <div class="auth-container fade-in">
+            <div class="auth-header">
+                <h1><i class="bi bi-cloud-arrow-up"></i> mYpuB</h1>
+                <p class="mb-0">Sube y comparte tus imágenes y videos</p>
+            </div>
+            <div class="auth-body">
+                <ul class="nav nav-tabs mb-4" id="authTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">Iniciar Sesión</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">Registrarse</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="authTabsContent">
+                    <!-- Formulario de Login -->
+                    <div class="tab-pane fade show active" id="login" role="tabpanel">
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="loginEmail" class="form-label">Correo electrónico</label>
+                                <input type="email" class="form-control" id="loginEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control" id="loginPassword" required>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Formulario de Registro -->
+                    <div class="tab-pane fade" id="register" role="tabpanel">
+                        <form id="registerForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="fullName" class="form-label">Nombre completo</label>
+                                    <input type="text" class="form-control" id="fullName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label">Correo electrónico (Gmail)</label>
+                                    <input type="email" class="form-control" id="email" required>
+                                    <div class="invalid-feedback">Debe ser una dirección de Gmail válida.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="gender" class="form-label">Sexo</label>
+                                    <select class="form-select" id="gender" required>
+                                        <option value="" selected disabled>Seleccionar...</option>
+                                        <option value="male">Hombre</option>
+                                        <option value="female">Mujer</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="country" class="form-label">País</label>
+                                    <select class="form-select" id="country" required>
+                                        <option value="" selected disabled>Selecciona un país</option>
+                                        <option value="España" data-prefix="+34">España (+34)</option>
+                                        <option value="México" data-prefix="+52">México (+52)</option>
+                                        <option value="Estados Unidos" data-prefix="+1">Estados Unidos (+1)</option>
+                                        <option value="Argentina" data-prefix="+54">Argentina (+54)</option>
+                                        <option value="Colombia" data-prefix="+57">Colombia (+57)</option>
+                                        <option value="Chile" data-prefix="+56">Chile (+56)</option>
+                                        <option value="Perú" data-prefix="+51">Perú (+51)</option>
+                                        <option value="Ecuador" data-prefix="+593">Ecuador (+593)</option>
+                                        <option value="Venezuela" data-prefix="+58">Venezuela (+58)</option>
+                                        <option value="Guinea Ecuatorial" data-prefix="+240">Guinea Ecuatorial (+240)</option>
+                                        <option value="Francia" data-prefix="+33">Francia (+33)</option>
+                                        <option value="Alemania" data-prefix="+49">Alemania (+49)</option>
+                                        <option value="Italia" data-prefix="+39">Italia (+39)</option>
+                                        <option value="Portugal" data-prefix="+351">Portugal (+351)</option>
+                                        <option value="Brasil" data-prefix="+55">Brasil (+55)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Teléfono</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="phonePrefix">+</span>
+                                    <input type="tel" class="form-control" id="phone" aria-describedby="phonePrefix" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control" id="password" required>
+                                <div class="password-strength strength-0" id="passwordStrength"></div>
+                                <small class="text-muted">Debe tener 12 caracteres: 6 letras (primera mayúscula), 4 números y 2 símbolos (@#&).</small>
+                                <div class="invalid-feedback">La contraseña no cumple con los requisitos.</div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="termsCheck" required>
+                                <label class="form-check-label" for="termsCheck">Acepto los términos y condiciones</label>
+                            </div>
+                            
+                            <div class="d-grid gap-2 mb-3">
+                                <button type="submit" class="btn btn-primary">Registrarse</button>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button type="button" class="btn btn-link" id="helpBtn">Ayuda <i class="bi bi-question-circle"></i></button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Panel de Ayuda -->
+    <div class="help-overlay" id="helpOverlay"></div>
+    <div class="help-panel" id="helpPanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Ayuda y Soporte</h5>
+            <button type="button" class="btn-close" id="closeHelpBtn"></button>
+        </div>
+        <ul class="nav nav-tabs mb-3" id="helpTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="email-tab" data-bs-toggle="tab" data-bs-target="#emailHelp" type="button" role="tab">Email</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="whatsapp-tab" data-bs-toggle="tab" data-bs-target="#whatsappHelp" type="button" role="tab">WhatsApp</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="helpTabsContent">
+            <div class="tab-pane fade show active" id="emailHelp" role="tabpanel">
+                <form id="emailHelpForm">
+                    <div class="mb-3">
+                        <label for="helpName" class="form-label">Nombre completo</label>
+                        <input type="text" class="form-control" id="helpName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="helpEmail" class="form-label">Correo para respuesta</label>
+                        <input type="email" class="form-control" id="helpEmail" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Enviar consulta por Email</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="tab-pane fade" id="whatsappHelp" role="tabpanel">
+                <form id="whatsappHelpForm">
+                    <div class="mb-3">
+                        <label for="helpWhatsappName" class="form-label">Nombre completo</label>
+                        <input type="text" class="form-control" id="helpWhatsappName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="helpWhatsappNumber" class="form-label">Número de WhatsApp</label>
+                        <input type="tel" class="form-control" id="helpWhatsappNumber" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Enviar consulta por WhatsApp</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Panel Principal -->
+    <div id="mainPanel">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="#"><i class="bi bi-cloud-arrow-up"></i> mYpuB</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-module="upload"><i class="bi bi-upload"></i> Subir</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-module="gallery"><i class="bi bi-images"></i> Galería</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-module="share"><i class="bi bi-share"></i> Compartir</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-module="users" id="usersModuleLink" style="display: none;"><i class="bi bi-people"></i> Usuarios</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-module="info"><i class="bi bi-info-circle"></i> Infórmate</a>
+                        </li>
+                    </ul>
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar me-2" id="userAvatar">U</div>
+                        <button class="btn btn-outline-light" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="container mt-4">
+            <div class="alert alert-success fade show" role="alert" id="welcomeAlert">
+                <i class="bi bi-check-circle-fill"></i> <span id="welcomeMessage">Bienvenido a mYpuB</span>
+            </div>
+            
+            <!-- Módulo de Subir -->
+            <div class="module-tab active" id="uploadModule">
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="bi bi-upload"></i> Subir archivos</h5>
+                                <div class="dropzone border rounded p-5 mb-3 text-center" id="uploadDropzone">
+                                    <i class="bi bi-cloud-arrow-up display-4 text-muted mb-3"></i>
+                                    <p>Arrastra tus archivos aquí o haz clic para seleccionarlos</p>
+                                    <p class="small text-muted">Formatos soportados: JPG, PNG, GIF, MP4, AVI, MOV</p>
+                                </div>
+                                <input type="file" id="fileInput" class="d-none" multiple accept="image/*,video/*">
+                                <div class="mb-3">
+                                    <label for="fileVisibility" class="form-label">Visibilidad:</label>
+                                    <select class="form-select" id="fileVisibility">
+                                        <option value="public">Público (visible y descargable por todos)</option>
+                                        <option value="private">Privado (solo visible para otros usuarios)</option>
+                                        <option value="intimate">Íntimo (nadie puede ver excepto yo)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fileFolder" class="form-label">Carpeta (opcional):</label>
+                                    <select class="form-select" id="fileFolder">
+                                        <option value="" selected>Sin carpeta</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fileDescription" class="form-label">Descripción (opcional):</label>
+                                    <textarea class="form-control" id="fileDescription" rows="2"></textarea>
+                                </div>
+                                <button class="btn btn-primary" id="selectFilesBtn"><i class="bi bi-folder2-open"></i> Seleccionar archivos</button>
+                                <button class="btn btn-success" id="uploadFilesBtn" disabled><i class="bi bi-cloud-upload"></i> Subir archivos</button>
+                                <div class="progress mt-3" id="uploadProgress" style="display: none; height: 20px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div id="uploadStatus" class="mt-2 small"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Módulo de Galería -->
+            <div class="module-tab" id="galleryModule">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h4><i class="bi bi-images"></i> Galería de archivos</h4>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button class="btn btn-primary btn-sm me-2" id="createFolderBtn">
+                            <i class="bi bi-folder-plus"></i> Crear carpeta
+                        </button>
+                        <div class="input-group" style="width: 200px;">
+                            <input type="text" class="form-control" id="gallerySearch" placeholder="Buscar...">
+                            <button class="btn btn-outline-secondary" type="button" id="searchBtn"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4" id="foldersContainer">
+                    <!-- Carpetas se cargarán aquí -->
+                </div>
+                
+                <div class="row" id="galleryFiles">
+                    <!-- Archivos se cargarán aquí -->
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2">Cargando galería...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Módulo de Compartir -->
+            <div class="module-tab" id="shareModule">
+                <!-- ... (código existente para compartir) ... -->
+            </div>
+            
+            <!-- Módulo de Gestión de Usuarios -->
+            <div class="module-tab" id="usersModule">
+                <!-- ... (código existente para gestión de usuarios) ... -->
+            </div>
+            
+            <!-- Módulo de Información -->
+            <div class="module-tab" id="infoModule">
+                <!-- ... (código existente para información) ... -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para crear carpeta -->
+    <div class="modal fade" id="folderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Crear nueva carpeta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="folderName" class="form-label">Nombre de la carpeta</label>
+                        <input type="text" class="form-control" id="folderName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="folderPrivacy" class="form-label">Privacidad</label>
+                        <select class="form-select" id="folderPrivacy">
+                            <option value="public">Pública (visible para todos)</option>
+                            <option value="private">Privada (solo para mí)</option>
+                            <option value="intimate">Íntima (nadie puede ver)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveFolderBtn">Crear carpeta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para visualización de archivos -->
+    <div class="modal fade" id="fileModal" tabindex="-1" aria-hidden="true">
+        <!-- ... (código existente para visualización de archivos) ... -->
+    </div>
+    
+    <!-- Modal para confirmación de acciones -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <!-- ... (código existente para confirmación) ... -->
+    </div>
+    
+    <!-- Toast para mensajes -->
+    <div class="toast-container">
+        <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toastTitle">Mensaje</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                Mensaje de prueba
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Nuestro archivo JS -->
+    <script src="main.js"></script>
+</body>
+</html>
