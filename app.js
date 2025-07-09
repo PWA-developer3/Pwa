@@ -15,7 +15,36 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
     const folderModal = new bootstrap.Modal(document.getElementById('folderModal'));
 
-    // Mostrar mensaje toast
+    /*** AUTENTICACIÓN: INTERFAZ Y NAVEGACIÓN ENTRE FORMULARIOS ***/
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginTabBtn = document.getElementById('loginTabBtn');
+    const registerTabBtn = document.getElementById('registerTabBtn');
+    const toRegisterLink = document.getElementById('toRegisterLink');
+    const toLoginLink = document.getElementById('toLoginLink');
+    // Tabs
+    loginTabBtn.addEventListener('click', function(){
+        loginTabBtn.classList.add('active');
+        registerTabBtn.classList.remove('active');
+        loginForm.style.display = '';
+        registerForm.style.display = 'none';
+    });
+    registerTabBtn.addEventListener('click', function(){
+        registerTabBtn.classList.add('active');
+        loginTabBtn.classList.remove('active');
+        registerForm.style.display = '';
+        loginForm.style.display = 'none';
+    });
+    toRegisterLink.addEventListener('click', function(e){
+        e.preventDefault();
+        registerTabBtn.click();
+    });
+    toLoginLink.addEventListener('click', function(e){
+        e.preventDefault();
+        loginTabBtn.click();
+    });
+
+    // Mensaje toast
     function showToast(title, message, isError = false) {
         const toastTitle = document.getElementById('toastTitle');
         const toastMessage = document.getElementById('toastMessage');
@@ -23,7 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
         toastTitle.textContent = title;
         toastMessage.textContent = message;
 
-        // Cambiar color según si es error o no
         const toastHeader = toastEl.querySelector('.toast-header');
         if (isError) {
             toastHeader.classList.add('bg-danger', 'text-white');
@@ -36,21 +64,16 @@ document.addEventListener('DOMContentLoaded', function() {
         toast.show();
     }
 
-    // Cargar lista de países de todos los países del mundo
+    // Países
     loadCountries();
 
     // Inicializar la base de datos primero
     initDB().then(() => {
-        // Una vez que la base de datos está lista, configuramos los event listeners
-
-        // Manejar el formulario de registro
-        const registerForm = document.getElementById('registerForm');
+        // Registro
         registerForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Validar formulario
             if (validateRegisterForm()) {
-                // Crear objeto de usuario
                 const user = {
                     fullName: document.getElementById('fullName').value,
                     email: document.getElementById('email').value,
@@ -62,18 +85,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     createdAt: new Date().toISOString(),
                     isActive: true
                 };
-
-                // Registrar usuario en IndexedDB
                 registerUser(user)
                     .then(() => {
-                        // Iniciar sesión automáticamente
-                        loginUser(user.email, user.password)
-                            .then(user => {
-                                showMainPanel(user);
-                            })
-                            .catch(error => {
-                                showToast('Error', 'Error al iniciar sesión después del registro', true);
-                            });
+                        showToast('Registro exitoso', 'Usuario registrado correctamente');
+                        // Retroalimentar a login
+                        loginTabBtn.click();
+                        document.getElementById('loginEmail').value = user.email;
+                        document.getElementById('loginPassword').focus();
                     })
                     .catch(error => {
                         showToast('Error', 'Error al registrar el usuario: ' + error, true);
@@ -81,8 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Manejar el formulario de login
-        const loginForm = document.getElementById('loginForm');
+        // Login
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -106,13 +123,10 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('Error', 'Hubo un problema al inicializar la aplicación', true);
     });
 
-    // ==================================
-    // ========== FUNCIONES =============
-    // ==================================
+    /*** RESTO DE LA APLICACIÓN ***/
 
-    // Lista de todos los países del mundo con prefijos (abreviada aquí, completa en el código real)
+    // Países del mundo
     function loadCountries() {
-        // Lista obtenida de https://countrycode.org/
         const countries = [
             { name: 'Afghanistan', prefix: '+93' }, { name: 'Albania', prefix: '+355' }, { name: 'Algeria', prefix: '+213' },
             { name: 'Andorra', prefix: '+376' }, { name: 'Angola', prefix: '+244' }, { name: 'Antigua and Barbuda', prefix: '+1-268' },
@@ -183,8 +197,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const countrySelect = document.getElementById('country');
         countrySelect.innerHTML = '';
-
-        // Agregar opción por defecto
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = 'Selecciona un país';
@@ -192,7 +204,6 @@ document.addEventListener('DOMContentLoaded', function() {
         defaultOption.disabled = true;
         countrySelect.appendChild(defaultOption);
 
-        // Ordenar países alfabéticamente
         countries.sort((a, b) => a.name.localeCompare(b.name));
         countries.forEach(country => {
             const option = document.createElement('option');
@@ -209,7 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedOption = countrySelect.options[countrySelect.selectedIndex];
         const phonePrefix = document.querySelector('.input-group-text');
         const phoneInput = document.getElementById('phone');
-
         if (selectedOption && selectedOption.dataset.prefix) {
             phonePrefix.textContent = selectedOption.dataset.prefix;
             phoneInput.value = selectedOption.dataset.prefix;
@@ -218,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
             phonePrefix.textContent = '+';
         }
     }
+    document.getElementById('country').addEventListener('change', updatePhonePrefix);
 
     // Validar formulario de registro
     function validateRegisterForm() {
@@ -229,13 +240,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const password = document.getElementById('password').value;
         const termsCheck = document.getElementById('termsCheck').checked;
 
-        // Validar nombre completo
         if (!fullName || fullName.trim().length < 3) {
             showToast('Error', 'Por favor ingresa un nombre completo válido', true);
             return false;
         }
-
-        // Validar email (debe ser Gmail)
         const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
         if (!emailRegex.test(email)) {
             document.getElementById('email').classList.add('is-invalid');
@@ -244,37 +252,26 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             document.getElementById('email').classList.remove('is-invalid');
         }
-
-        // Validar género
         if (!gender) {
             showToast('Error', 'Por favor selecciona tu género', true);
             return false;
         }
-
-        // Validar país
         if (!country) {
             showToast('Error', 'Por favor selecciona tu país', true);
             return false;
         }
-
-        // Validar teléfono
         const phoneRegex = /^\+\d{1,4}\d{6,15}$/;
         if (!phoneRegex.test(phone)) {
             showToast('Error', 'Por favor ingresa un número de teléfono válido (incluyendo prefijo)', true);
             return false;
         }
-
-        // Validar contraseña
         if (!validatePassword(password, true)) {
             return false;
         }
-
-        // Validar términos y condiciones
         if (!termsCheck) {
             showToast('Error', 'Debes aceptar los términos y condiciones', true);
             return false;
         }
-
         return true;
     }
 
@@ -282,22 +279,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function validatePassword(password, showError = false) {
         const passwordStrength = document.getElementById('passwordStrength');
         const passwordInput = document.getElementById('password');
-
-        // Expresión regular para contraseña normal
         const normalPasswordRegex = /^(?=.*[A-Z])(?=(?:.*[a-z]){5,})(?=(?:.*\d){4,})(?=(?:.*[@#&]){2,}).{12,}$/;
-        // Expresión regular para desarrollador: SÓLO exactamente "Mpteen2025@&"
         const devPasswordRegex = /^Mpteen2025@&$/;
 
         let isValid = false;
         let strength = 0;
 
-        // Verificar si es contraseña de desarrollador
         if (devPasswordRegex.test(password)) {
-            isValid = true;
-            strength = 4;
+            isValid = true; strength = 4;
         } else {
             isValid = normalPasswordRegex.test(password);
-            // Calcular fortaleza de la contraseña (simplificado)
             if (password.length >= 12) strength++;
             if (/[A-Z]/.test(password)) strength++;
             if ((password.match(/[a-z]/g)||[]).length >= 5) strength++;
@@ -305,11 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if ((password.match(/[@#&]/g)||[]).length >= 2) strength++;
             if (strength > 4) strength = 4;
         }
-
-        // Actualizar barra de fortaleza
         passwordStrength.className = `password-strength strength-${strength}`;
-
-        // Mostrar mensaje de requisitos (sin mencionar Mpteen2025@&)
         const passwordHelp = document.getElementById('passwordHelp');
         if (passwordHelp) {
             passwordHelp.innerHTML = `
@@ -323,8 +310,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </ul>
             `;
         }
-
-        // Mostrar error si se solicita
         if (showError && !isValid) {
             passwordInput.classList.add('is-invalid');
             showToast('Error', 'La contraseña no cumple con los requisitos', true);
@@ -332,64 +317,47 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (isValid) {
             passwordInput.classList.remove('is-invalid');
         }
-
         return isValid;
     }
+    document.getElementById('password').addEventListener('input', function() { validatePassword(this.value); });
 
     // Mostrar panel principal
     function showMainPanel(user) {
         currentUser = user;
-
         document.getElementById('authPanel').style.display = 'none';
         document.getElementById('mainPanel').style.display = 'block';
 
-        // Mostrar mensaje de bienvenida
         const welcomeMessage = document.getElementById('welcomeMessage');
-        const saludo = user.gender === 'male' ? 'Sr.' : (user.gender === 'female' ? 'Sra.' : '');
+        const saludo = user.gender === 'male' ? 'Sr.' : user.gender === 'female' ? 'Sra.' : '';
         welcomeMessage.textContent = `Bienvenid${user.gender === 'male' ? 'o' : user.gender === 'female' ? 'a' : '@'} a mYpuB ${saludo} ${user.fullName}`;
 
-        // Mostrar avatar de usuario
         const userAvatar = document.getElementById('userAvatar');
         const initials = user.fullName.split(' ').map(name => name[0]).join('').toUpperCase();
         userAvatar.textContent = initials.substring(0, 2);
 
-        // Mostrar módulo de usuarios si es desarrollador
         if (user.isDeveloper) {
             document.getElementById('usersModuleLink').style.display = 'block';
         } else {
             document.getElementById('usersModuleLink').style.display = 'none';
         }
-
-        // Cargar módulo inicial
         switchModule('upload');
-
-        // Mostrar toast de bienvenida
         showToast('Bienvenido', `Has iniciado sesión correctamente como ${user.email}`);
     }
-
-    // Cerrar sesión
     function logoutUser() {
         currentUser = null;
         document.getElementById('mainPanel').style.display = 'none';
         document.getElementById('authPanel').style.display = 'block';
-
-        // Limpiar formularios
-        document.getElementById('loginForm').reset();
-        document.getElementById('registerForm').reset();
-
+        loginForm.reset();
+        registerForm.reset();
         showToast('Sesión cerrada', 'Has cerrado sesión correctamente');
     }
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 
-    // Cambiar entre módulos
+    // Navegación entre módulos
     function switchModule(moduleName) {
-        document.querySelectorAll('.module-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-
-        document.querySelectorAll('[data-module]').forEach(link => {
-            link.classList.remove('active');
-        });
-
+        document.querySelectorAll('.module-tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('[data-module]').forEach(link => link.classList.remove('active'));
         document.getElementById(`${moduleName}Module`).classList.add('active');
         document.querySelector(`[data-module="${moduleName}"]`).classList.add('active');
 
@@ -412,289 +380,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadSharedFiles();
                 break;
             case 'users':
-                if (currentUser.isDeveloper) {
-                    loadUsersForManagement();
-                }
-                break;
-            case 'info':
-                // Nada adicional
+                if (currentUser.isDeveloper) loadUsersForManagement();
                 break;
         }
     }
-
-    // Inicializar IndexedDB
-    function initDB() {
-        return new Promise((resolve, reject) => {
-            const DB_NAME = 'mYpuB_DB';
-            const DB_VERSION = 3;
-            const USER_STORE = 'users';
-            const FILE_STORE = 'files';
-            const FOLDER_STORE = 'folders';
-
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-            request.onerror = function(event) {
-                console.error('Error al abrir la base de datos:', event.target.error);
-                reject('Error al abrir la base de datos');
-            };
-
-            request.onsuccess = function(event) {
-                db = event.target.result;
-                setInterval(checkEmptyFolders, 60 * 60 * 1000);
-                resolve(db);
-            };
-
-            request.onupgradeneeded = function(event) {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(USER_STORE)) {
-                    const userStore = db.createObjectStore(USER_STORE, { keyPath: 'email' });
-                    userStore.createIndex('email', 'email', { unique: true });
-                    userStore.createIndex('isActive', 'isActive', { unique: false });
-                    userStore.createIndex('isDeveloper', 'isDeveloper', { unique: false });
-                }
-                if (!db.objectStoreNames.contains(FILE_STORE)) {
-                    const fileStore = db.createObjectStore(FILE_STORE, { keyPath: 'id', autoIncrement: true });
-                    fileStore.createIndex('userEmail', 'userEmail', { unique: false });
-                    fileStore.createIndex('type', 'type', { unique: false });
-                    fileStore.createIndex('visibility', 'visibility', { unique: false });
-                    fileStore.createIndex('uploadDate', 'uploadDate', { unique: false });
-                    fileStore.createIndex('folderId', 'folderId', { unique: false });
-                }
-                if (!db.objectStoreNames.contains(FOLDER_STORE)) {
-                    const folderStore = db.createObjectStore(FOLDER_STORE, { keyPath: 'id', autoIncrement: true });
-                    folderStore.createIndex('userEmail', 'userEmail', { unique: false });
-                    folderStore.createIndex('createdAt', 'createdAt', { unique: false });
-                }
-            };
+    const moduleLinks = document.querySelectorAll('[data-module]');
+    moduleLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchModule(this.dataset.module);
         });
-    }
-
-    // CRUD: Usuarios
-    function registerUser(user) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['users'], 'readwrite');
-            const store = transaction.objectStore('users');
-            const request = store.add(user);
-            request.onsuccess = () => resolve();
-            request.onerror = event => {
-                if (event.target.error.name === 'ConstraintError') {
-                    reject('El correo electrónico ya está registrado');
-                } else {
-                    reject('Error al registrar el usuario');
-                }
-            };
-        });
-    }
-    function loginUser(email, password) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['users'], 'readonly');
-            const store = transaction.objectStore('users');
-            const request = store.get(email);
-            request.onsuccess = function() {
-                const user = request.result;
-                if (user && user.password === password) {
-                    resolve(user);
-                } else {
-                    reject('Credenciales incorrectas');
-                }
-            };
-            request.onerror = () => reject('Error al buscar usuario');
-        });
-    }
-    function getAllUsers() {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['users'], 'readonly');
-            const store = transaction.objectStore('users');
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al obtener usuarios');
-        });
-    }
-    function getUserByEmail(email) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['users'], 'readonly');
-            const store = transaction.objectStore('users');
-            const request = store.get(email);
-            request.onsuccess = () => request.result ? resolve(request.result) : reject('Usuario no encontrado');
-            request.onerror = () => reject('Error al buscar usuario');
-        });
-    }
-    function updateUser(email, updates) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['users'], 'readwrite');
-            const store = transaction.objectStore('users');
-            const getRequest = store.get(email);
-            getRequest.onsuccess = function() {
-                const user = getRequest.result;
-                if (!user) { reject('Usuario no encontrado'); return; }
-                const updatedUser = { ...user, ...updates };
-                const putRequest = store.put(updatedUser);
-                putRequest.onsuccess = () => resolve(updatedUser);
-                putRequest.onerror = () => reject('Error al actualizar usuario');
-            };
-            getRequest.onerror = () => reject('Error al obtener usuario');
-        });
-    }
-
-    // CRUD: Archivos
-    function saveFile(fileData) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['files'], 'readwrite');
-            const store = transaction.objectStore('files');
-            const request = store.add(fileData);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al guardar archivo');
-        });
-    }
-    function getAllFiles() {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['files'], 'readonly');
-            const store = transaction.objectStore('files');
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al obtener archivos');
-        });
-    }
-    function getUserFiles(userEmail) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['files'], 'readonly');
-            const store = transaction.objectStore('files');
-            const index = store.index('userEmail');
-            const request = index.getAll(userEmail);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al obtener archivos del usuario');
-        });
-    }
-    function getFilesInFolder(folderId) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['files'], 'readonly');
-            const store = transaction.objectStore('files');
-            const index = store.index('folderId');
-            const request = index.getAll(folderId);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al obtener archivos de la carpeta');
-        });
-    }
-    function getFileById(fileId) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['files'], 'readonly');
-            const store = transaction.objectStore('files');
-            const request = store.get(parseInt(fileId));
-            request.onsuccess = () => request.result ? resolve(request.result) : reject('Archivo no encontrado');
-            request.onerror = () => reject('Error al buscar archivo');
-        });
-    }
-    function updateFile(fileId, updates) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['files'], 'readwrite');
-            const store = transaction.objectStore('files');
-            const getRequest = store.get(parseInt(fileId));
-            getRequest.onsuccess = function() {
-                const file = getRequest.result;
-                if (!file) { reject('Archivo no encontrado'); return; }
-                const updatedFile = { ...file, ...updates };
-                const putRequest = store.put(updatedFile);
-                putRequest.onsuccess = () => resolve(updatedFile);
-                putRequest.onerror = () => reject('Error al actualizar archivo');
-            };
-            getRequest.onerror = () => reject('Error al obtener archivo');
-        });
-    }
-    function deleteFileFromDB(fileId) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['files'], 'readwrite');
-            const store = transaction.objectStore('files');
-            const request = store.delete(parseInt(fileId));
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject('Error al eliminar archivo');
-        });
-    }
-
-    // CRUD: Carpetas
-    function saveFolder(folderData) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['folders'], 'readwrite');
-            const store = transaction.objectStore('folders');
-            const request = store.add(folderData);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al guardar carpeta');
-        });
-    }
-    function getAllFolders() {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['folders'], 'readonly');
-            const store = transaction.objectStore('folders');
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al obtener carpetas');
-        });
-    }
-    function getUserFolders(userEmail) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['folders'], 'readonly');
-            const store = transaction.objectStore('folders');
-            const index = store.index('userEmail');
-            const request = index.getAll(userEmail);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject('Error al obtener carpetas del usuario');
-        });
-    }
-    function getFolderById(folderId) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['folders'], 'readonly');
-            const store = transaction.objectStore('folders');
-            const request = store.get(parseInt(folderId));
-            request.onsuccess = () => request.result ? resolve(request.result) : reject('Carpeta no encontrada');
-            request.onerror = () => reject('Error al buscar carpeta');
-        });
-    }
-    function updateFolder(folderId, updates) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['folders'], 'readwrite');
-            const store = transaction.objectStore('folders');
-            const getRequest = store.get(parseInt(folderId));
-            getRequest.onsuccess = function() {
-                const folder = getRequest.result;
-                if (!folder) { reject('Carpeta no encontrada'); return; }
-                const updatedFolder = { ...folder, ...updates };
-                const putRequest = store.put(updatedFolder);
-                putRequest.onsuccess = () => resolve(updatedFolder);
-                putRequest.onerror = () => reject('Error al actualizar carpeta');
-            };
-            getRequest.onerror = () => reject('Error al obtener carpeta');
-        });
-    }
-    function deleteFolder(folderId) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject('La base de datos no está inicializada');
-            const transaction = db.transaction(['folders'], 'readwrite');
-            const store = transaction.objectStore('folders');
-            const request = store.delete(parseInt(folderId));
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject('Error al eliminar carpeta');
-        });
-    }
-
-    // ================================
-    // ========== EVENTOS =============
-    // ================================
+    });
 
     // Ayuda
     const helpBtn = document.getElementById('helpBtn');
@@ -703,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const helpOverlay = document.getElementById('helpOverlay');
     const closeHelpBtn = document.getElementById('closeHelpBtn');
     helpBtn.addEventListener('click', showHelp);
-    helpBtnMain.addEventListener('click', showHelp);
+    if (helpBtnMain) helpBtnMain.addEventListener('click', showHelp);
     closeHelpBtn.addEventListener('click', hideHelp);
     helpOverlay.addEventListener('click', hideHelp);
     function showHelp() {
@@ -715,43 +411,24 @@ document.addEventListener('DOMContentLoaded', function() {
         helpOverlay.style.display = 'none';
     }
     // Email ayuda
-    const emailHelpForm = document.getElementById('emailHelpForm');
-    emailHelpForm.addEventListener('submit', function(e) {
+    document.getElementById('emailHelpForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const name = document.getElementById('helpName').value;
         window.location.href = `mailto:enzemajr@gmail.com?subject=Consulta%20de%20ayuda%20de%20${encodeURIComponent(name)}&body=Por%20favor%20escriba%20su%20consulta%20aquí...`;
         hideHelp();
-        emailHelpForm.reset();
+        this.reset();
         showToast('Éxito', 'Se ha abierto tu cliente de correo para enviar la consulta');
     });
-    // WhatsApp ayuda
-    const whatsappHelpForm = document.getElementById('whatsappHelpForm');
-    whatsappHelpForm.addEventListener('submit', function(e) {
+    document.getElementById('whatsappHelpForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const name = document.getElementById('helpWhatsappName').value;
         window.open(`https://wa.me/+240222084663?text=Hola,%20soy%20${encodeURIComponent(name)}.%20Tengo%20una%20consulta%20sobre%20mYpuB...`, '_blank');
         hideHelp();
-        whatsappHelpForm.reset();
+        this.reset();
         showToast('Éxito', 'Se ha abierto WhatsApp para enviar tu consulta');
     });
 
-    // Validar contraseña en tiempo real
-    const passwordInput = document.getElementById('password');
-    passwordInput.addEventListener('input', function() {
-        validatePassword(this.value);
-    });
-
-    // Manejar cambio de país para actualizar prefijo telefónico
-    const countrySelect = document.getElementById('country');
-    countrySelect.addEventListener('change', updatePhonePrefix);
-
-    // Manejar cierre de sesión
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', logoutUser);
-    }
-
-    // Manejar selección de archivos
+    // Subida de archivos
     const fileInput = document.getElementById('fileInput');
     const selectFilesBtn = document.getElementById('selectFilesBtn');
     const uploadDropzone = document.getElementById('uploadDropzone');
@@ -764,8 +441,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.dataTransfer.files.length > 0) handleFileSelection(e.dataTransfer.files);
     });
     uploadDropzone.addEventListener('click', () => fileInput.click());
-
-    // Manejar subida de archivos
     const uploadFilesBtn = document.getElementById('uploadFilesBtn');
     uploadFilesBtn.addEventListener('click', uploadSelectedFiles);
 
@@ -779,7 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadFilesBtn.disabled = selectedFiles.length === 0;
         document.getElementById('uploadStatus').textContent = `${selectedFiles.length} archivo(s) seleccionado(s).`;
     }
-
     function uploadSelectedFiles() {
         if (!selectedFiles.length) return;
         const progressBar = document.querySelector('#uploadProgress .progress-bar');
@@ -797,9 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadFilesBtn.disabled = true;
                 fileInput.value = '';
                 document.getElementById('uploadProgress').style.display = 'none';
-                if (document.getElementById('galleryModule').classList.contains('active')) {
-                    loadGalleryFiles();
-                }
+                if (document.getElementById('galleryModule').classList.contains('active')) loadGalleryFiles();
             }
         }
         for (const file of selectedFiles) {
@@ -829,55 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Navegación entre módulos
-    const moduleLinks = document.querySelectorAll('[data-module]');
-    moduleLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            switchModule(this.dataset.module);
-        });
-    });
-
-    // Buscar en galería
-    const searchBtn = document.getElementById('searchBtn');
-    searchBtn.addEventListener('click', loadGalleryFiles);
-    const gallerySearch = document.getElementById('gallerySearch');
-    gallerySearch.addEventListener('keyup', function(e) { if (e.key === 'Enter') loadGalleryFiles(); });
-
-    // Botones modal archivo
-    const likeBtn = document.getElementById('likeBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const deleteBtn = document.getElementById('deleteBtn');
-    const shareBtn = document.getElementById('shareBtn');
-    likeBtn.addEventListener('click', () => currentFileView && toggleLike(currentFileView.id));
-    downloadBtn.addEventListener('click', () => currentFileView && downloadFile(currentFileView.id));
-    deleteBtn.addEventListener('click', () => {
-        showConfirmModal('Eliminar archivo', '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.', () => deleteFile(currentFileView.id));
-    });
-    shareBtn.addEventListener('click', () => shareFileModal(currentFileView));
-
-    // Crear carpeta
-    const createFolderBtn = document.getElementById('createFolderBtn');
-    createFolderBtn.addEventListener('click', showCreateFolderModal);
-    const folderForm = document.getElementById('folderForm');
-    folderForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        createFolder();
-    });
-
-    // Confirmar acción modal
-    const confirmActionBtn = document.getElementById('confirmActionBtn');
-    confirmActionBtn.addEventListener('click', function() {
-        if (currentAction && typeof currentAction === 'function') {
-            currentAction();
-        }
-        confirmModal.hide();
-    });
-
-    // ================================
-    // ========== GALERÍA =============
-    // ================================
-
+    // Galería
     function loadUserFolders() {
         const foldersContainer = document.getElementById('userFolders');
         foldersContainer.innerHTML = `
@@ -921,7 +545,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('folderVisibility').value = 'public';
         folderModal.show();
     }
-    function createFolder() {
+    document.getElementById('createFolderBtn').addEventListener('click', showCreateFolderModal);
+
+    // Hacer el botón de crear carpeta funcional e interactivo
+    document.getElementById('folderForm').addEventListener('submit', function(e) {
+        e.preventDefault();
         const name = document.getElementById('folderName').value.trim();
         const visibility = document.getElementById('folderVisibility').value;
         if (!name) {
@@ -944,28 +572,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(() => {
                 showToast('Error', 'No se pudo crear la carpeta', true);
             });
-    }
-    function checkEmptyFolders() {
-        getAllFolders()
-            .then(folders => {
-                const now = new Date();
-                const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-                folders.forEach(folder => {
-                    if (new Date(folder.createdAt) < twentyFourHoursAgo) {
-                        getFilesInFolder(folder.id)
-                            .then(files => {
-                                if (files.length === 0) {
-                                    deleteFolder(folder.id).catch(()=>{});
-                                } else {
-                                    updateFolder(folder.id, { lastChecked: new Date().toISOString() });
-                                }
-                            });
-                    }
-                });
-            }).catch(()=>{});
-    }
+    });
 
-    // Galería
+    // Búsqueda en galería
+    document.getElementById('searchBtn').addEventListener('click', loadGalleryFiles);
+    document.getElementById('gallerySearch').addEventListener('keyup', function(e) { if (e.key === 'Enter') loadGalleryFiles(); });
+
     function loadGalleryFiles() {
         const searchTerm = document.getElementById('gallerySearch').value.toLowerCase();
         const galleryFiles = document.getElementById('galleryFiles');
@@ -1088,7 +700,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Ver archivo en modal
+    // Modal archivo
+    const likeBtn = document.getElementById('likeBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    likeBtn.addEventListener('click', () => currentFileView && toggleLike(currentFileView.id));
+    downloadBtn.addEventListener('click', () => currentFileView && downloadFile(currentFileView.id));
+    deleteBtn.addEventListener('click', () => {
+        showConfirmModal('Eliminar archivo', '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.', () => deleteFile(currentFileView.id));
+    });
+    shareBtn.addEventListener('click', () => shareFileModal(currentFileView));
+
     function viewFile(fileId) {
         getFileById(fileId).then(file => {
             currentFileView = file;
@@ -1116,7 +739,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Error', 'No se pudo cargar el archivo', true);
         });
     }
-
     function toggleLike(fileId) {
         getFileById(fileId)
             .then(file => {
@@ -1132,7 +754,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(() => showToast('Error', 'No se pudo actualizar el like', true));
     }
-
     function downloadFile(fileId) {
         getFileById(fileId)
             .then(file => updateFile(fileId, { downloads: (file.downloads || 0) + 1 }).then(()=>file))
@@ -1145,7 +766,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(() => showToast('Error', 'No se pudo descargar el archivo', true));
     }
-
     function deleteFile(fileId) {
         deleteFileFromDB(fileId)
             .then(() => {
@@ -1172,7 +792,6 @@ document.addEventListener('DOMContentLoaded', function() {
             shareUserSelect.innerHTML = `<option value="" selected disabled>Error al cargar usuarios</option>`;
         });
     }
-
     function loadUserFilesForSharing() {
         const shareFileSelect = document.getElementById('shareFile');
         shareFileSelect.innerHTML = `<option value="" selected disabled>Cargando tus archivos...</option>`;
@@ -1190,8 +809,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.getElementById('shareBtn').addEventListener('click', shareFile);
-
+    // Hacer el módulo de compartir completamente funcional:
+    document.getElementById('shareForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        shareFile();
+    });
     function shareFile() {
         const shareUser = document.getElementById('shareUser').value;
         const shareFile = document.getElementById('shareFile').value;
@@ -1214,9 +836,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Error', error.message || 'No se pudo compartir el archivo', true);
             });
     }
-
     function shareFileModal(file) {
-        // Abre el módulo compartir, selecciona archivo y enfoca
         switchModule('share');
         setTimeout(() => {
             loadUserFilesForSharing();
@@ -1224,7 +844,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('shareFile').value = file.id;
         }, 150);
     }
-
     function loadSharedFiles() {
         const sharedFilesTable = document.querySelector('#sharedFilesTable tbody');
         sharedFilesTable.innerHTML = `
@@ -1326,6 +945,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             <button class="btn ${user.isActive ? 'btn-outline-danger' : 'btn-outline-success'} toggle-user-btn" data-user-email="${user.email}">
                                 <i class="bi ${user.isActive ? 'bi-lock' : 'bi-unlock'}"></i>
                             </button>
+                            <button class="btn btn-outline-danger delete-user-btn" data-user-email="${user.email}">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
                     </td>
                 `;
@@ -1336,6 +958,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             document.querySelectorAll('.toggle-user-btn').forEach(btn => {
                 btn.addEventListener('click', function() { toggleUserStatus(this.dataset.userEmail); });
+            });
+            document.querySelectorAll('.delete-user-btn').forEach(btn => {
+                btn.addEventListener('click', function() { 
+                    showConfirmModal(
+                        'Eliminar usuario',
+                        '¿Seguro que quieres eliminar este usuario? Esta acción es irreversible y eliminará también todos sus archivos y carpetas.',
+                        () => deleteUserCompletely(this.dataset.userEmail)
+                    );
+                });
             });
         }).catch(() => {
             usersTable.innerHTML = `
@@ -1360,6 +991,26 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(() => showToast('Error', 'No se pudo actualizar el usuario', true));
     }
+    // Eliminar usuario (y archivos/carpetas asociados)
+    function deleteUserCompletely(userEmail) {
+        // Borrar archivos
+        getUserFiles(userEmail).then(files => {
+            let promises = files.map(f => deleteFileFromDB(f.id));
+            return Promise.all(promises);
+        }).then(() => {
+            // Borrar carpetas
+            return getUserFolders(userEmail).then(folders => {
+                let promises = folders.map(f => deleteFolder(f.id));
+                return Promise.all(promises);
+            });
+        }).then(() => {
+            // Borrar usuario
+            return deleteUserFromDB(userEmail);
+        }).then(() => {
+            showToast('Éxito', 'Usuario eliminado correctamente');
+            loadUsersForManagement();
+        }).catch(() => showToast('Error', 'No se pudo eliminar el usuario', true));
+    }
 
     // Modal de confirmación
     function showConfirmModal(title, message, action) {
@@ -1367,5 +1018,306 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('confirmModalBody').textContent = message;
         currentAction = action;
         confirmModal.show();
+    }
+    document.getElementById('confirmActionBtn').addEventListener('click', function() {
+        if (currentAction && typeof currentAction === 'function') {
+            currentAction();
+        }
+        confirmModal.hide();
+    });
+
+    // IndexedDB CRUD
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const DB_NAME = 'mYpuB_DB';
+            const DB_VERSION = 3;
+            const USER_STORE = 'users';
+            const FILE_STORE = 'files';
+            const FOLDER_STORE = 'folders';
+
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onerror = function(event) {
+                reject('Error al abrir la base de datos');
+            };
+            request.onsuccess = function(event) {
+                db = event.target.result;
+                setInterval(checkEmptyFolders, 60 * 60 * 1000);
+                resolve(db);
+            };
+            request.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(USER_STORE)) {
+                    const userStore = db.createObjectStore(USER_STORE, { keyPath: 'email' });
+                    userStore.createIndex('email', 'email', { unique: true });
+                    userStore.createIndex('isActive', 'isActive', { unique: false });
+                    userStore.createIndex('isDeveloper', 'isDeveloper', { unique: false });
+                }
+                if (!db.objectStoreNames.contains(FILE_STORE)) {
+                    const fileStore = db.createObjectStore(FILE_STORE, { keyPath: 'id', autoIncrement: true });
+                    fileStore.createIndex('userEmail', 'userEmail', { unique: false });
+                    fileStore.createIndex('type', 'type', { unique: false });
+                    fileStore.createIndex('visibility', 'visibility', { unique: false });
+                    fileStore.createIndex('uploadDate', 'uploadDate', { unique: false });
+                    fileStore.createIndex('folderId', 'folderId', { unique: false });
+                }
+                if (!db.objectStoreNames.contains(FOLDER_STORE)) {
+                    const folderStore = db.createObjectStore(FOLDER_STORE, { keyPath: 'id', autoIncrement: true });
+                    folderStore.createIndex('userEmail', 'userEmail', { unique: false });
+                    folderStore.createIndex('createdAt', 'createdAt', { unique: false });
+                }
+            };
+        });
+    }
+    function registerUser(user) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['users'], 'readwrite');
+            const store = transaction.objectStore('users');
+            const request = store.add(user);
+            request.onsuccess = () => resolve();
+            request.onerror = event => {
+                if (event.target.error.name === 'ConstraintError') {
+                    reject('El correo electrónico ya está registrado');
+                } else {
+                    reject('Error al registrar el usuario');
+                }
+            };
+        });
+    }
+    function loginUser(email, password) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['users'], 'readonly');
+            const store = transaction.objectStore('users');
+            const request = store.get(email);
+            request.onsuccess = function() {
+                const user = request.result;
+                if (user && user.password === password) {
+                    resolve(user);
+                } else {
+                    reject('Credenciales incorrectas');
+                }
+            };
+            request.onerror = () => reject('Error al buscar usuario');
+        });
+    }
+    function getAllUsers() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['users'], 'readonly');
+            const store = transaction.objectStore('users');
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al obtener usuarios');
+        });
+    }
+    function getUserByEmail(email) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['users'], 'readonly');
+            const store = transaction.objectStore('users');
+            const request = store.get(email);
+            request.onsuccess = () => request.result ? resolve(request.result) : reject('Usuario no encontrado');
+            request.onerror = () => reject('Error al buscar usuario');
+        });
+    }
+    function updateUser(email, updates) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['users'], 'readwrite');
+            const store = transaction.objectStore('users');
+            const getRequest = store.get(email);
+            getRequest.onsuccess = function() {
+                const user = getRequest.result;
+                if (!user) { reject('Usuario no encontrado'); return; }
+                const updatedUser = { ...user, ...updates };
+                const putRequest = store.put(updatedUser);
+                putRequest.onsuccess = () => resolve(updatedUser);
+                putRequest.onerror = () => reject('Error al actualizar usuario');
+            };
+            getRequest.onerror = () => reject('Error al obtener usuario');
+        });
+    }
+    // Eliminar usuario completamente
+    function deleteUserFromDB(email) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['users'], 'readwrite');
+            const store = transaction.objectStore('users');
+            const request = store.delete(email);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject('Error al eliminar usuario');
+        });
+    }
+
+    // Archivos
+    function saveFile(fileData) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['files'], 'readwrite');
+            const store = transaction.objectStore('files');
+            const request = store.add(fileData);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al guardar archivo');
+        });
+    }
+    function getAllFiles() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['files'], 'readonly');
+            const store = transaction.objectStore('files');
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al obtener archivos');
+        });
+    }
+    function getUserFiles(userEmail) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['files'], 'readonly');
+            const store = transaction.objectStore('files');
+            const index = store.index('userEmail');
+            const request = index.getAll(userEmail);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al obtener archivos del usuario');
+        });
+    }
+    function getFilesInFolder(folderId) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['files'], 'readonly');
+            const store = transaction.objectStore('files');
+            const index = store.index('folderId');
+            const request = index.getAll(folderId);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al obtener archivos de la carpeta');
+        });
+    }
+    function getFileById(fileId) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['files'], 'readonly');
+            const store = transaction.objectStore('files');
+            const request = store.get(parseInt(fileId));
+            request.onsuccess = () => request.result ? resolve(request.result) : reject('Archivo no encontrado');
+            request.onerror = () => reject('Error al buscar archivo');
+        });
+    }
+    function updateFile(fileId, updates) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['files'], 'readwrite');
+            const store = transaction.objectStore('files');
+            const getRequest = store.get(parseInt(fileId));
+            getRequest.onsuccess = function() {
+                const file = getRequest.result;
+                if (!file) { reject('Archivo no encontrado'); return; }
+                const updatedFile = { ...file, ...updates };
+                const putRequest = store.put(updatedFile);
+                putRequest.onsuccess = () => resolve(updatedFile);
+                putRequest.onerror = () => reject('Error al actualizar archivo');
+            };
+            getRequest.onerror = () => reject('Error al obtener archivo');
+        });
+    }
+    function deleteFileFromDB(fileId) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['files'], 'readwrite');
+            const store = transaction.objectStore('files');
+            const request = store.delete(parseInt(fileId));
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject('Error al eliminar archivo');
+        });
+    }
+
+    // Carpetas
+    function saveFolder(folderData) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['folders'], 'readwrite');
+            const store = transaction.objectStore('folders');
+            const request = store.add(folderData);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al guardar carpeta');
+        });
+    }
+    function getAllFolders() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['folders'], 'readonly');
+            const store = transaction.objectStore('folders');
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al obtener carpetas');
+        });
+    }
+    function getUserFolders(userEmail) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['folders'], 'readonly');
+            const store = transaction.objectStore('folders');
+            const index = store.index('userEmail');
+            const request = index.getAll(userEmail);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject('Error al obtener carpetas del usuario');
+        });
+    }
+    function getFolderById(folderId) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['folders'], 'readonly');
+            const store = transaction.objectStore('folders');
+            const request = store.get(parseInt(folderId));
+            request.onsuccess = () => request.result ? resolve(request.result) : reject('Carpeta no encontrada');
+            request.onerror = () => reject('Error al buscar carpeta');
+        });
+    }
+    function updateFolder(folderId, updates) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['folders'], 'readwrite');
+            const store = transaction.objectStore('folders');
+            const getRequest = store.get(parseInt(folderId));
+            getRequest.onsuccess = function() {
+                const folder = getRequest.result;
+                if (!folder) { reject('Carpeta no encontrada'); return; }
+                const updatedFolder = { ...folder, ...updates };
+                const putRequest = store.put(updatedFolder);
+                putRequest.onsuccess = () => resolve(updatedFolder);
+                putRequest.onerror = () => reject('Error al actualizar carpeta');
+            };
+            getRequest.onerror = () => reject('Error al obtener carpeta');
+        });
+    }
+    function deleteFolder(folderId) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject('La base de datos no está inicializada');
+            const transaction = db.transaction(['folders'], 'readwrite');
+            const store = transaction.objectStore('folders');
+            const request = store.delete(parseInt(folderId));
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject('Error al eliminar carpeta');
+        });
+    }
+    function checkEmptyFolders() {
+        getAllFolders()
+            .then(folders => {
+                const now = new Date();
+                const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+                folders.forEach(folder => {
+                    if (new Date(folder.createdAt) < twentyFourHoursAgo) {
+                        getFilesInFolder(folder.id)
+                            .then(files => {
+                                if (files.length === 0) {
+                                    deleteFolder(folder.id).catch(()=>{});
+                                } else {
+                                    updateFolder(folder.id, { lastChecked: new Date().toISOString() });
+                                }
+                            });
+                    }
+                });
+            }).catch(()=>{});
     }
 });
