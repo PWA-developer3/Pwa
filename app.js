@@ -1,1 +1,735 @@
+// Esperar a que el DOM esté completamente cargado
+document.addEventListener('DOMContentLoaded', async function() {
+    // Variables globales
+    let currentUser = null;
+    let selectedFiles = [];
+    let currentFileView = null;
+    let currentAction = null;
+    let currentFolder = null;
+    let db = null;
+    let galleryFilesCache = [];
+    let notifications = [];
+    let activityLog = [];
 
+    // Inicializar Bootstrap
+    const toastEl = document.getElementById('toast');
+    const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
+    const fileModal = new bootstrap.Modal(document.getElementById('fileModal'));
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const folderModal = new bootstrap.Modal(document.getElementById('folderModal'));
+
+    // ==================== BASE DE DATOS ====================
+    await initDB();
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const DB_NAME = 'mYpuB_DB';
+            const DB_VERSION = 4;
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = () => reject('Error al abrir la base de datos');
+            request.onsuccess = event => {
+                db = event.target.result;
+                setInterval(checkEmptyFolders, 60 * 60 * 1000);
+                resolve(db);
+            };
+            request.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('users')) {
+                    const userStore = db.createObjectStore('users', { keyPath: 'email' });
+                    userStore.createIndex('email', 'email', { unique: true });
+                    userStore.createIndex('isActive', 'isActive', { unique: false });
+                    userStore.createIndex('isDeveloper', 'isDeveloper', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('files')) {
+                    const fileStore = db.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
+                    fileStore.createIndex('userEmail', 'userEmail', { unique: false });
+                    fileStore.createIndex('type', 'type', { unique: false });
+                    fileStore.createIndex('visibility', 'visibility', { unique: false });
+                    fileStore.createIndex('uploadDate', 'uploadDate', { unique: false });
+                    fileStore.createIndex('folderId', 'folderId', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('folders')) {
+                    const folderStore = db.createObjectStore('folders', { keyPath: 'id', autoIncrement: true });
+                    folderStore.createIndex('userEmail', 'userEmail', { unique: false });
+                    folderStore.createIndex('createdAt', 'createdAt', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('comments')) {
+                    const commentStore = db.createObjectStore('comments', { keyPath: 'id', autoIncrement: true });
+                    commentStore.createIndex('fileId', 'fileId', { unique: false });
+                    commentStore.createIndex('date', 'date', { unique: false });
+                }
+            };
+        });
+    }
+
+    // ==================== AUTENTICACIÓN ====================
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginTabBtn = document.getElementById('loginTabBtn');
+    const registerTabBtn = document.getElementById('registerTabBtn');
+    const toRegisterLink = document.getElementById('toRegisterLink');
+    const toLoginLink = document.getElementById('toLoginLink');
+
+    loginTabBtn.addEventListener('click', function(){
+        loginTabBtn.classList.add('active');
+        registerTabBtn.classList.remove('active');
+        loginForm.style.display = '';
+        registerForm.style.display = 'none';
+    });
+    registerTabBtn.addEventListener('click', function(){
+        registerTabBtn.classList.add('active');
+        loginTabBtn.classList.remove('active');
+        registerForm.style.display = '';
+        loginForm.style.display = 'none';
+    });
+    toRegisterLink.addEventListener('click', function(e){
+        e.preventDefault();
+        registerTabBtn.click();
+    });
+    toLoginLink.addEventListener('click', function(e){
+        e.preventDefault();
+        loginTabBtn.click();
+    });
+
+    document.getElementById('helpBtnLogin').addEventListener('click', showHelp);
+    document.getElementById('helpBtnRegister').addEventListener('click', showHelp);
+
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        loginUser(email, password)
+            .then(user => {
+                if (!user.isActive) {
+                    showToast('Error', 'Tu cuenta ha sido desactivada por el administrador', true);
+                    return;
+                }
+                showMainPanel(user);
+                logActivity('Inicio de sesión');
+            })
+            .catch(() => {
+                showToast('Error', 'Credenciales incorrectas o usuario no registrado', true);
+            });
+    });
+
+    registerForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (validateRegisterForm()) {
+            const user = {
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                gender: document.getElementById('gender').value,
+                country: document.getElementById('country').value,
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                isDeveloper: document.getElementById('password').value === 'Mpteen2025@&',
+                avatar: "default-avatar.png",
+                createdAt: new Date().toISOString(),
+                isActive: true
+            };
+            registerUser(user)
+                .then(() => {
+                    showToast('Registro exitoso', 'Usuario registrado correctamente');
+                    loginTabBtn.click();
+                    document.getElementById('loginEmail').value = user.email;
+                    document.getElementById('loginPassword').focus();
+                })
+                .catch(error => {
+                    showToast('Error', 'Error al registrar el usuario: ' + error, true);
+                });
+        }
+    });
+
+    // ==================== TOAST ====================
+    function showToast(title, message, isError = false) {
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        toastTitle.textContent = title;
+        toastMessage.textContent = message;
+        const toastHeader = toastEl.querySelector('.toast-header');
+        if (isError) {
+            toastHeader.classList.add('bg-danger', 'text-white');
+            toastHeader.classList.remove('bg-success');
+        } else {
+            toastHeader.classList.add('bg-success', 'text-white');
+            toastHeader.classList.remove('bg-danger');
+        }
+        toast.show();
+    }
+
+    // ==================== PAÍSES ====================
+    loadCountries();
+    function loadCountries() {
+        const countries = [
+            { name: 'Afghanistan', prefix: '+93' }, { name: 'Albania', prefix: '+355' }, { name: 'Algeria', prefix: '+213' },
+            { name: 'Andorra', prefix: '+376' }, { name: 'Angola', prefix: '+244' }, { name: 'Antigua and Barbuda', prefix: '+1-268' },
+            { name: 'Argentina', prefix: '+54' }, { name: 'Armenia', prefix: '+374' }, { name: 'Australia', prefix: '+61' },
+            { name: 'Austria', prefix: '+43' }, { name: 'Azerbaijan', prefix: '+994' }, { name: 'Bahamas', prefix: '+1-242' },
+            { name: 'Bahrain', prefix: '+973' }, { name: 'Bangladesh', prefix: '+880' }, { name: 'Barbados', prefix: '+1-246' },
+            { name: 'Belarus', prefix: '+375' }, { name: 'Belgium', prefix: '+32' }, { name: 'Belize', prefix: '+501' },
+            { name: 'Benin', prefix: '+229' }, { name: 'Bhutan', prefix: '+975' }, { name: 'Bolivia', prefix: '+591' },
+            { name: 'Bosnia and Herzegovina', prefix: '+387' }, { name: 'Botswana', prefix: '+267' }, { name: 'Brazil', prefix: '+55' },
+            { name: 'Brunei', prefix: '+673' }, { name: 'Bulgaria', prefix: '+359' }, { name: 'Burkina Faso', prefix: '+226' },
+            { name: 'Burundi', prefix: '+257' }, { name: 'Cabo Verde', prefix: '+238' }, { name: 'Cambodia', prefix: '+855' },
+            { name: 'Cameroon', prefix: '+237' }, { name: 'Canada', prefix: '+1' }, { name: 'Central African Republic', prefix: '+236' },
+            { name: 'Chad', prefix: '+235' }, { name: 'Chile', prefix: '+56' }, { name: 'China', prefix: '+86' },
+            { name: 'Colombia', prefix: '+57' }, { name: 'Comoros', prefix: '+269' }, { name: 'Congo', prefix: '+242' },
+            { name: 'Costa Rica', prefix: '+506' }, { name: 'Croatia', prefix: '+385' }, { name: 'Cuba', prefix: '+53' },
+            { name: 'Cyprus', prefix: '+357' }, { name: 'Czech Republic', prefix: '+420' }, { name: 'Denmark', prefix: '+45' },
+            { name: 'Djibouti', prefix: '+253' }, { name: 'Dominica', prefix: '+1-767' }, { name: 'Dominican Republic', prefix: '+1-809' },
+            { name: 'Ecuador', prefix: '+593' }, { name: 'Egypt', prefix: '+20' }, { name: 'El Salvador', prefix: '+503' },
+            { name: 'Equatorial Guinea', prefix: '+240' }, { name: 'Eritrea', prefix: '+291' }, { name: 'Estonia', prefix: '+372' },
+            { name: 'Eswatini', prefix: '+268' }, { name: 'Ethiopia', prefix: '+251' }, { name: 'Fiji', prefix: '+679' },
+            { name: 'Finland', prefix: '+358' }, { name: 'France', prefix: '+33' }, { name: 'Gabon', prefix: '+241' },
+            { name: 'Gambia', prefix: '+220' }, { name: 'Georgia', prefix: '+995' }, { name: 'Germany', prefix: '+49' },
+            { name: 'Ghana', prefix: '+233' }, { name: 'Greece', prefix: '+30' }, { name: 'Grenada', prefix: '+1-473' },
+            { name: 'Guatemala', prefix: '+502' }, { name: 'Guinea', prefix: '+224' }, { name: 'Guinea-Bissau', prefix: '+245' },
+            { name: 'Guyana', prefix: '+592' }, { name: 'Haiti', prefix: '+509' }, { name: 'Honduras', prefix: '+504' },
+            { name: 'Hungary', prefix: '+36' }, { name: 'Iceland', prefix: '+354' }, { name: 'India', prefix: '+91' },
+            { name: 'Indonesia', prefix: '+62' }, { name: 'Iran', prefix: '+98' }, { name: 'Iraq', prefix: '+964' },
+            { name: 'Ireland', prefix: '+353' }, { name: 'Israel', prefix: '+972' }, { name: 'Italy', prefix: '+39' },
+            { name: 'Jamaica', prefix: '+1-876' }, { name: 'Japan', prefix: '+81' }, { name: 'Jordan', prefix: '+962' },
+            { name: 'Kazakhstan', prefix: '+7' }, { name: 'Kenya', prefix: '+254' }, { name: 'Kiribati', prefix: '+686' },
+            { name: 'Kuwait', prefix: '+965' }, { name: 'Kyrgyzstan', prefix: '+996' }, { name: 'Laos', prefix: '+856' },
+            { name: 'Latvia', prefix: '+371' }, { name: 'Lebanon', prefix: '+961' }, { name: 'Lesotho', prefix: '+266' },
+            { name: 'Liberia', prefix: '+231' }, { name: 'Libya', prefix: '+218' }, { name: 'Liechtenstein', prefix: '+423' },
+            { name: 'Lithuania', prefix: '+370' }, { name: 'Luxembourg', prefix: '+352' }, { name: 'Madagascar', prefix: '+261' },
+            { name: 'Malawi', prefix: '+265' }, { name: 'Malaysia', prefix: '+60' }, { name: 'Maldives', prefix: '+960' },
+            { name: 'Mali', prefix: '+223' }, { name: 'Malta', prefix: '+356' }, { name: 'Marshall Islands', prefix: '+692' },
+            { name: 'Mauritania', prefix: '+222' }, { name: 'Mauritius', prefix: '+230' }, { name: 'Mexico', prefix: '+52' },
+            { name: 'Micronesia', prefix: '+691' }, { name: 'Moldova', prefix: '+373' }, { name: 'Monaco', prefix: '+377' },
+            { name: 'Mongolia', prefix: '+976' }, { name: 'Montenegro', prefix: '+382' }, { name: 'Morocco', prefix: '+212' },
+            { name: 'Mozambique', prefix: '+258' }, { name: 'Myanmar', prefix: '+95' }, { name: 'Namibia', prefix: '+264' },
+            { name: 'Nauru', prefix: '+674' }, { name: 'Nepal', prefix: '+977' }, { name: 'Netherlands', prefix: '+31' },
+            { name: 'New Zealand', prefix: '+64' }, { name: 'Nicaragua', prefix: '+505' }, { name: 'Niger', prefix: '+227' },
+            { name: 'Nigeria', prefix: '+234' }, { name: 'North Korea', prefix: '+850' }, { name: 'North Macedonia', prefix: '+389' },
+            { name: 'Norway', prefix: '+47' }, { name: 'Oman', prefix: '+968' }, { name: 'Pakistan', prefix: '+92' },
+            { name: 'Palau', prefix: '+680' }, { name: 'Palestine', prefix: '+970' }, { name: 'Panama', prefix: '+507' },
+            { name: 'Papua New Guinea', prefix: '+675' }, { name: 'Paraguay', prefix: '+595' }, { name: 'Peru', prefix: '+51' },
+            { name: 'Philippines', prefix: '+63' }, { name: 'Poland', prefix: '+48' }, { name: 'Portugal', prefix: '+351' },
+            { name: 'Qatar', prefix: '+974' }, { name: 'Romania', prefix: '+40' }, { name: 'Russia', prefix: '+7' },
+            { name: 'Rwanda', prefix: '+250' }, { name: 'Saint Kitts and Nevis', prefix: '+1-869' }, { name: 'Saint Lucia', prefix: '+1-758' },
+            { name: 'Saint Vincent and the Grenadines', prefix: '+1-784' }, { name: 'Samoa', prefix: '+685' }, { name: 'San Marino', prefix: '+378' },
+            { name: 'Sao Tome and Principe', prefix: '+239' }, { name: 'Saudi Arabia', prefix: '+966' }, { name: 'Senegal', prefix: '+221' },
+            { name: 'Serbia', prefix: '+381' }, { name: 'Seychelles', prefix: '+248' }, { name: 'Sierra Leone', prefix: '+232' },
+            { name: 'Singapore', prefix: '+65' }, { name: 'Slovakia', prefix: '+421' }, { name: 'Slovenia', prefix: '+386' },
+            { name: 'Solomon Islands', prefix: '+677' }, { name: 'Somalia', prefix: '+252' }, { name: 'South Africa', prefix: '+27' },
+            { name: 'South Korea', prefix: '+82' }, { name: 'South Sudan', prefix: '+211' }, { name: 'Spain', prefix: '+34' },
+            { name: 'Sri Lanka', prefix: '+94' }, { name: 'Sudan', prefix: '+249' }, { name: 'Suriname', prefix: '+597' },
+            { name: 'Sweden', prefix: '+46' }, { name: 'Switzerland', prefix: '+41' }, { name: 'Syria', prefix: '+963' },
+            { name: 'Taiwan', prefix: '+886' }, { name: 'Tajikistan', prefix: '+992' }, { name: 'Tanzania', prefix: '+255' },
+            { name: 'Thailand', prefix: '+66' }, { name: 'Timor-Leste', prefix: '+670' }, { name: 'Togo', prefix: '+228' },
+            { name: 'Tonga', prefix: '+676' }, { name: 'Trinidad and Tobago', prefix: '+1-868' }, { name: 'Tunisia', prefix: '+216' },
+            { name: 'Turkey', prefix: '+90' }, { name: 'Turkmenistan', prefix: '+993' }, { name: 'Tuvalu', prefix: '+688' },
+            { name: 'Uganda', prefix: '+256' }, { name: 'Ukraine', prefix: '+380' }, { name: 'United Arab Emirates', prefix: '+971' },
+            { name: 'United Kingdom', prefix: '+44' }, { name: 'United States', prefix: '+1' }, { name: 'Uruguay', prefix: '+598' },
+            { name: 'Uzbekistan', prefix: '+998' }, { name: 'Vanuatu', prefix: '+678' }, { name: 'Vatican City', prefix: '+39' },
+            { name: 'Venezuela', prefix: '+58' }, { name: 'Vietnam', prefix: '+84' }, { name: 'Yemen', prefix: '+967' },
+            { name: 'Zambia', prefix: '+260' }, { name: 'Zimbabwe', prefix: '+263' }
+        ];
+        const countrySelect = document.getElementById('country');
+        countrySelect.innerHTML = '';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Selecciona un país';
+        defaultOption.selected = true;
+        defaultOption.disabled = true;
+        countrySelect.appendChild(defaultOption);
+        countries.sort((a, b) => a.name.localeCompare(b.name));
+        countries.forEach(country => {
+            const option = document.createElement('option');
+            option.value = country.name;
+            option.dataset.prefix = country.prefix;
+            option.textContent = `${country.name} (${country.prefix})`;
+            countrySelect.appendChild(option);
+        });
+    }
+    document.getElementById('country').addEventListener('change', updatePhonePrefix);
+    function updatePhonePrefix() {
+        const countrySelect = document.getElementById('country');
+        const selectedOption = countrySelect.options[countrySelect.selectedIndex];
+        const phonePrefix = document.querySelector('.input-group-text');
+        const phoneInput = document.getElementById('phone');
+        if (selectedOption && selectedOption.dataset.prefix) {
+            phonePrefix.textContent = selectedOption.dataset.prefix;
+            phoneInput.value = selectedOption.dataset.prefix;
+            phoneInput.focus();
+        } else {
+            phonePrefix.textContent = '+';
+        }
+    }
+
+    // ==================== VALIDACIONES Y FORMULARIOS ====================
+    function validateRegisterForm() {
+        const fullName = document.getElementById('fullName').value;
+        const email = document.getElementById('email').value;
+        const gender = document.getElementById('gender').value;
+        const country = document.getElementById('country').value;
+        const phone = document.getElementById('phone').value;
+        const password = document.getElementById('password').value;
+        const termsCheck = document.getElementById('termsCheck').checked;
+
+        if (!fullName || fullName.trim().length < 3) {
+            showToast('Error', 'Por favor ingresa un nombre completo válido', true);
+            return false;
+        }
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        if (!emailRegex.test(email)) {
+            document.getElementById('email').classList.add('is-invalid');
+            showToast('Error', 'Por favor ingresa una dirección de Gmail válida', true);
+            return false;
+        } else {
+            document.getElementById('email').classList.remove('is-invalid');
+        }
+        if (!gender) {
+            showToast('Error', 'Por favor selecciona tu género', true);
+            return false;
+        }
+        if (!country) {
+            showToast('Error', 'Por favor selecciona tu país', true);
+            return false;
+        }
+        const phoneRegex = /^\+\d{1,4}\d{6,15}$/;
+        if (!phoneRegex.test(phone)) {
+            showToast('Error', 'Por favor ingresa un número de teléfono válido (incluyendo prefijo)', true);
+            return false;
+        }
+        if (!validatePassword(password, true)) {
+            return false;
+        }
+        if (!termsCheck) {
+            showToast('Error', 'Debes aceptar los términos y condiciones', true);
+            return false;
+        }
+        return true;
+    }
+    function validatePassword(password, showError = false) {
+        const passwordStrength = document.getElementById('passwordStrength');
+        const passwordInput = document.getElementById('password');
+        const normalPasswordRegex = /^(?=.*[A-Z])(?=(?:.*[a-z]){5,})(?=(?:.*\d){4,})(?=(?:.*[@#&]){2,}).{12,}$/;
+        const devPasswordRegex = /^Mpteen2025@&$/;
+        let isValid = false;
+        let strength = 0;
+        if (devPasswordRegex.test(password)) {
+            isValid = true; strength = 4;
+        } else {
+            isValid = normalPasswordRegex.test(password);
+            if (password.length >= 12) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if ((password.match(/[a-z]/g)||[]).length >= 5) strength++;
+            if ((password.match(/\d/g)||[]).length >= 4) strength++;
+            if ((password.match(/[@#&]/g)||[]).length >= 2) strength++;
+            if (strength > 4) strength = 4;
+        }
+        passwordStrength.className = `password-strength strength-${strength}`;
+        const passwordHelp = document.getElementById('passwordHelp');
+        if (passwordHelp) {
+            passwordHelp.innerHTML = `
+                <small>La contraseña debe contener:</small>
+                <ul class="small">
+                    <li>Al menos 12 caracteres</li>
+                    <li>1 letra mayúscula</li>
+                    <li>5 letras minúsculas</li>
+                    <li>4 números</li>
+                    <li>2 caracteres especiales (@, # o &)</li>
+                </ul>
+            `;
+        }
+        if (showError && !isValid) {
+            passwordInput.classList.add('is-invalid');
+            showToast('Error', 'La contraseña no cumple con los requisitos', true);
+            return false;
+        } else if (isValid) {
+            passwordInput.classList.remove('is-invalid');
+        }
+        return isValid;
+    }
+    document.getElementById('password').addEventListener('input', function() { validatePassword(this.value); });
+
+    // ==================== RESTO DEL CÓDIGO ====================
+    // (Aquí incluye todos los fragmentos previos - galería, subida, carpetas, compartir, gestión, historial, perfil, notificaciones, ayuda, logout, y cambio de módulos)
+    // Por espacio, si lo requieres, puedo seguir con el resto de fragmentos ya integrados que necesitas. 
+
+    // Si quieres el app.js ENORME y completo, pídemelo por partes (por ejemplo: galería y subida, ayuda y logout, historial y notificaciones, perfil editable, etc).
+  //************
+   // ==================== SUBIDA DE ARCHIVOS ====================
+document.getElementById('fileInput').addEventListener('change', handleFileInput);
+
+function handleFileInput(e) {
+    const files = Array.from(e.target.files);
+    if (!currentUser) {
+        showToast('Error', 'Debes iniciar sesión para subir archivos', true);
+        return;
+    }
+    if (files.length === 0) return;
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const fileData = {
+                name: file.name,
+                type: file.type.startsWith('image') ? 'image' : 'video',
+                data: evt.target.result.split(',')[1], // base64
+                userEmail: currentUser.email,
+                userName: currentUser.fullName,
+                uploadDate: new Date().toISOString(),
+                visibility: document.getElementById('fileVisibility').value,
+                folderId: currentFolder ? parseInt(currentFolder) : null,
+                description: '',
+                likes: [],
+                sharedWith: [],
+            };
+            saveFile(fileData)
+                .then(() => {
+                    showToast('Éxito', 'Archivo subido correctamente');
+                    addNotification(`Has subido el archivo: <b>${file.name}</b>`);
+                    logActivity('Subida de archivo', file.name);
+                    loadGalleryFiles();
+                })
+                .catch(() => showToast('Error', 'No se pudo guardar el archivo', true));
+        };
+        reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+}
+
+// ==================== CREACIÓN Y NAVEGACIÓN DE CARPETAS ====================
+document.getElementById('createFolderBtn').addEventListener('click', showCreateFolderModal);
+const createFolderBtn2 = document.getElementById('createFolderBtn2');
+if (createFolderBtn2) createFolderBtn2.addEventListener('click', showCreateFolderModal);
+
+function showCreateFolderModal() {
+    document.getElementById('folderName').value = '';
+    document.getElementById('folderVisibility').value = 'public';
+    folderModal.show();
+}
+document.getElementById('folderForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('folderName').value.trim();
+    const visibility = document.getElementById('folderVisibility').value;
+    if (!name) {
+        showToast('Error', 'Por favor ingresa un nombre para la carpeta', true);
+        return;
+    }
+    const folderData = {
+        name,
+        visibility,
+        userEmail: currentUser.email,
+        createdAt: new Date().toISOString(),
+        lastChecked: new Date().toISOString()
+    };
+    saveFolder(folderData)
+        .then(() => {
+            showToast('Éxito', 'Carpeta creada correctamente');
+            logActivity('Creación de carpeta', name);
+            folderModal.hide();
+            loadUserFolders();
+        })
+        .catch(() => {
+            showToast('Error', 'No se pudo crear la carpeta', true);
+        });
+});
+
+function loadUserFolders() {
+    const foldersContainer = document.getElementById('userFolders');
+    foldersContainer.innerHTML = `
+        <div class="text-center py-2">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    `;
+    getUserFolders(currentUser.email)
+        .then(folders => {
+            if (folders.length === 0) {
+                foldersContainer.innerHTML = '<p class="text-muted small">No tienes carpetas creadas</p>';
+                return;
+            }
+            let html = '<div class="d-flex flex-wrap gap-2 mb-3">';
+            html += `<button class="btn btn-sm ${!currentFolder ? 'btn-primary' : 'btn-outline-primary'} folder-btn" data-folder-id="">
+                <i class="bi bi-folder"></i> Todos
+            </button>`;
+            folders.forEach(folder => {
+                html += `<button class="btn btn-sm ${currentFolder == folder.id ? 'btn-primary' : 'btn-outline-primary'} folder-btn" data-folder-id="${folder.id}">
+                    <i class="bi bi-folder${folder.visibility === 'private' ? '-fill' : ''}"></i> ${folder.name}
+                </button>`;
+            });
+            html += '</div>';
+            foldersContainer.innerHTML = html;
+            document.querySelectorAll('.folder-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentFolder = this.dataset.folderId || null;
+                    loadGalleryFiles();
+                    loadUserFolders();
+                });
+            });
+        })
+        .catch(() => {
+            foldersContainer.innerHTML = '<p class="text-muted small">Error al cargar carpetas</p>';
+        });
+}
+
+// ==================== GALERÍA Y NAVEGACIÓN ====================
+document.getElementById('searchBtn').addEventListener('click', loadGalleryFiles);
+document.getElementById('gallerySearch').addEventListener('keyup', function(e) { if (e.key === 'Enter') loadGalleryFiles(); });
+
+function loadGalleryFiles() {
+    const searchTerm = document.getElementById('gallerySearch').value.toLowerCase();
+    const galleryFiles = document.getElementById('galleryFiles');
+    galleryFiles.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando galería...</p>
+        </div>
+    `;
+    getAllFiles().then(files => {
+        galleryFilesCache = files
+            .filter(file => {
+                if (currentFolder) {
+                    return file.folderId == currentFolder;
+                } else {
+                    return !file.folderId || file.userEmail === currentUser.email;
+                }
+            })
+            .filter(file => {
+                if (!searchTerm) return true;
+                return (
+                    file.name.toLowerCase().includes(searchTerm) ||
+                    (file.description?.toLowerCase().includes(searchTerm)) ||
+                    (file.userName?.toLowerCase().includes(searchTerm))
+                );
+            })
+            .filter(file => {
+                if (file.userEmail === currentUser.email) return true;
+                if (file.visibility === 'public') return true;
+                if (file.sharedWith && file.sharedWith.includes(currentUser.email)) return true;
+                return false;
+            })
+            .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+
+        if (galleryFilesCache.length === 0) {
+            galleryFiles.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="bi bi-folder-x display-4 text-muted"></i>
+                    <p class="mt-3">No se encontraron archivos</p>
+                </div>
+            `;
+            return;
+        }
+        galleryFiles.innerHTML = '';
+        galleryFilesCache.forEach((file, idx) => {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 col-sm-6 mb-2';
+            const card = document.createElement('div');
+            card.className = 'card file-card h-100';
+            let thumbnailContent = '';
+            if (file.type === 'image') {
+                thumbnailContent = `<img src="data:image/jpeg;base64,${file.data}" class="file-thumbnail card-img-top" alt="${file.name}">`;
+            } else {
+                thumbnailContent = `
+                    <div class="video-thumbnail">
+                        <video class="file-thumbnail card-img-top" style="object-fit:cover;max-height:190px;" src="data:video/mp4;base64,${file.data}" muted preload="metadata"></video>
+                        <i class="bi bi-play-circle video-play-icon"></i>
+                    </div>
+                `;
+            }
+            const isLiked = file.likes && file.likes.includes(currentUser.email);
+            const isOwner = file.userEmail === currentUser.email;
+            let privacyIcon = '';
+            if (file.visibility === 'private') {
+                privacyIcon = '<i class="bi bi-lock-fill text-danger ms-1" title="Privado"></i>';
+            } else if (file.sharedWith && file.sharedWith.length > 0) {
+                privacyIcon = '<i class="bi bi-people-fill text-primary ms-1" title="Compartido"></i>';
+            }
+            card.innerHTML = `
+                ${thumbnailContent}
+                <div class="card-body">
+                    <h6 class="card-title">${file.name} ${privacyIcon}</h6>
+                    <p class="card-text small text-muted">Subido por: ${file.userName}</p>
+                    <p class="card-text small text-muted">${new Date(file.uploadDate).toLocaleString()}</p>
+                    <div class="file-actions">
+                        <div>
+                            <button class="btn btn-sm ${isLiked ? 'btn-primary' : 'btn-outline-primary'} like-btn" data-file-id="${file.id}">
+                                <i class="bi bi-hand-thumbs-up"></i> ${file.likes ? file.likes.length : 0}
+                            </button>
+                            ${(file.visibility === 'public' || isOwner) ? `
+                                <button class="btn btn-sm btn-outline-success download-btn ms-2" data-file-id="${file.id}">
+                                    <i class="bi bi-download"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary view-btn" data-file-id="${file.id}" data-idx="${idx}">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    ${isOwner ? `
+                        <div class="mt-2 text-end">
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-file-id="${file.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            col.appendChild(card);
+            galleryFiles.appendChild(col);
+        });
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', function() { toggleLike(this.dataset.fileId); });
+        });
+        document.querySelectorAll('.download-btn').forEach(btn => {
+            btn.addEventListener('click', function() { downloadFile(this.dataset.fileId); });
+        });
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', function() { viewFile(this.dataset.fileId, parseInt(this.dataset.idx)); });
+        });
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                showConfirmModal('Eliminar archivo', '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.', () => deleteFile(this.dataset.fileId));
+            });
+        });
+    }).catch(() => {
+        galleryFiles.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-exclamation-triangle display-4 text-danger"></i>
+                <p class="mt-3">Error al cargar la galería</p>
+            </div>
+        `;
+    });
+}
+
+// ...El resto de fragmentos como modal de archivo, comentarios, compartir archivos, gestión de usuarios, historial, actividad, perfil, notificaciones, ayuda, logout y cambio de módulos debe ir a continuación.
+// Si deseas, te lo sigo extendiendo funcionalmente, sólo dímelo.
+//**************
+// ==================== PANEL PRINCIPAL: INICIALIZACIÓN Y CARGA DE SECCIONES ====================
+function showMainPanel(user) {
+    currentUser = user;
+    document.getElementById('authPanel').style.display = 'none';
+    document.getElementById('mainPanel').style.display = '';
+    document.getElementById('mainNav').style.display = '';
+    document.getElementById('userNav').style.display = '';
+    document.getElementById('userNameNav').textContent = user.fullName;
+    document.getElementById('userAvatar').src = user.avatar || 'default-avatar.png';
+    document.getElementById('navUsers').style.display = user.isDeveloper ? '' : 'none';
+    switchModule('gallery');
+    loadUserFolders();
+    loadGalleryFiles();
+    loadSharedFiles();
+    renderNotifications();
+    renderActivityLog();
+    if (user.isDeveloper) loadUsersForManagement();
+}
+
+// ==================== PANEL DE CARPETAS (LISTADO SIMPLE) ====================
+function loadFoldersModule() {
+    const foldersList = document.getElementById('foldersList');
+    foldersList.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    `;
+    getUserFolders(currentUser.email)
+        .then(folders => {
+            if (!folders.length) {
+                foldersList.innerHTML = '<div class="text-muted py-3">No tienes carpetas creadas</div>';
+                return;
+            }
+            foldersList.innerHTML = folders.map(folder => `
+                <div class="card mb-2">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <span>
+                            <i class="bi bi-folder${folder.visibility === 'private' ? '-fill' : ''} me-2"></i>
+                            <strong>${folder.name}</strong>
+                            <small class="text-muted ms-2">${folder.visibility === 'private' ? 'Privada' : 'Pública'}</small>
+                        </span>
+                        <span>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteFolderUI(${folder.id})" title="Eliminar"><i class="bi bi-trash"></i></button>
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+window.deleteFolderUI = function(folderId) {
+    showConfirmModal('Eliminar carpeta', '¿Seguro que quieres eliminar esta carpeta y sus archivos?', function() {
+        getFilesInFolder(folderId).then(files => {
+            return Promise.all(files.map(f => deleteFileFromDB(f.id)));
+        }).then(() => deleteFolder(folderId))
+        .then(() => {
+            showToast('Éxito', 'Carpeta y archivos eliminados');
+            loadFoldersModule();
+            loadUserFolders();
+            loadGalleryFiles();
+        });
+    });
+};
+// Carga automática del módulo de carpetas cuando corresponde
+document.querySelector('.main-nav-link[data-module="folders"]').addEventListener('click', loadFoldersModule);
+
+// ==================== ACCESO RÁPIDO A MI ACTIVIDAD ====================
+document.querySelector('.main-nav-link[data-module="activity"]').addEventListener('click', renderActivityLog);
+
+// ==================== CAMBIO DE MÓDULO AL VOLVER AL PANEL PRINCIPAL ====
+document.querySelector('.main-nav-link[data-module="gallery"]').addEventListener('click', function() {
+    loadUserFolders();
+    loadGalleryFiles();
+});
+
+// ==================== MANEJO DE FOCUS EN CAMPOS ====================
+document.getElementById('loginEmail').focus();
+
+// ==================== ACCESIBILIDAD Y USABILIDAD: TECLAS RÁPIDAS ====================
+document.addEventListener('keydown', function(e) {
+    if (!currentUser) return;
+    // Alt+1: Galería, Alt+2: Carpetas, Alt+3: Compartidos, Alt+4: Actividad, Alt+5: Perfil
+    if (e.altKey) {
+        if (e.key === "1") { switchModule('gallery'); }
+        if (e.key === "2") { switchModule('folders'); loadFoldersModule(); }
+        if (e.key === "3") { switchModule('share'); loadSharedFiles(); }
+        if (e.key === "4") { switchModule('activity'); renderActivityLog(); }
+        if (e.key === "5") { showProfileModal(); }
+    }
+});
+
+// ==================== MODO OSCURO SIMPLE (BONUS ELEGANCIA) ====================
+const darkModeBtn = document.createElement('button');
+darkModeBtn.className = "btn btn-sm btn-outline-secondary";
+darkModeBtn.innerHTML = '<i class="bi bi-moon"></i>';
+darkModeBtn.title = "Modo oscuro";
+document.getElementById('userNav').insertBefore(darkModeBtn, document.getElementById('logoutBtn'));
+let darkMode = false;
+darkModeBtn.onclick = function() {
+    darkMode = !darkMode;
+    document.body.classList.toggle('bg-dark', darkMode);
+    document.body.classList.toggle('text-light', darkMode);
+    darkModeBtn.innerHTML = darkMode ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
+    darkModeBtn.title = darkMode ? "Modo claro" : "Modo oscuro";
+};
+
+// ==================== PREVENCIÓN DE ERRORES Y USABILIDAD ====================
+// Evita doble submit en formularios
+document.querySelectorAll('form').forEach(f => {
+    f.addEventListener('submit', function(e) {
+        if (f.dataset.submitted) e.preventDefault();
+        f.dataset.submitted = 'true';
+        setTimeout(() => { f.dataset.submitted = ''; }, 2000);
+    });
+});
+
+// ==================== OPTIMIZACIÓN FINAL: LIMPIA CAMPOS AL ABRIR MODALES ====================
+['folderModal', 'profileModal', 'shareModal'].forEach(id => {
+    const modalEl = document.getElementById(id);
+    if (!modalEl) return;
+    modalEl.addEventListener('show.bs.modal', function() {
+        this.querySelectorAll('input,select').forEach(inp => { if (inp.type !== "hidden") inp.value = ""; });
+        if (id === 'profileModal') {
+            document.getElementById('profileAvatarPreview').src = currentUser.avatar || 'default-avatar.png';
+        }
+    });
+});
+  //**********
+  
+});
