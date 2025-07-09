@@ -83,6 +83,27 @@
             -webkit-appearance: none; margin: 0;
         }
         input[type=number] { -moz-appearance: textfield; }
+        /* Auth panel separation */
+        .auth-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+            gap: 2rem;
+        }
+        .auth-tabs button {
+            border: none;
+            background: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #3973d1;
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+        }
+        .auth-tabs .active {
+            border-bottom: 2px solid #3973d1;
+            color: #24365b;
+        }
     </style>
 </head>
 <body>
@@ -130,8 +151,13 @@
 
     <!-- Panel de Autenticación -->
     <div class="container auth-panel" id="authPanel">
+        <div class="auth-tabs">
+            <button id="loginTabBtn" class="active" type="button">Iniciar sesión</button>
+            <button id="registerTabBtn" type="button">Registro</button>
+        </div>
         <div class="row">
-            <div class="col-lg-6 mb-3">
+            <div class="col-lg-12 mb-3">
+                <!-- Login Form -->
                 <form id="loginForm" class="p-4 shadow bg-white rounded">
                     <h4 class="mb-3">Iniciar Sesión</h4>
                     <div class="mb-2">
@@ -140,11 +166,13 @@
                     <div class="mb-2">
                         <input id="loginPassword" class="form-control" type="password" placeholder="Contraseña" autocomplete="current-password" required>
                     </div>
+                    <div class="mb-2 text-end">
+                        <span class="small">¿No tienes cuenta? <a href="#" id="toRegisterLink">Regístrate</a></span>
+                    </div>
                     <button class="btn btn-primary w-100" type="submit">Entrar</button>
                 </form>
-            </div>
-            <div class="col-lg-6 mb-3">
-                <form id="registerForm" class="p-4 shadow bg-white rounded">
+                <!-- Register Form -->
+                <form id="registerForm" class="p-4 shadow bg-white rounded" style="display:none;">
                     <h4 class="mb-3">Registro</h4>
                     <div class="mb-2">
                         <input id="fullName" class="form-control" type="text" placeholder="Nombre completo" required>
@@ -175,6 +203,9 @@
                     <div class="form-check mb-2">
                         <input type="checkbox" class="form-check-input" id="termsCheck" required>
                         <label class="form-check-label" for="termsCheck">Acepto los términos y condiciones</label>
+                    </div>
+                    <div class="mb-2 text-end">
+                        <span class="small">¿Ya tienes cuenta? <a href="#" id="toLoginLink">Inicia sesión</a></span>
                     </div>
                     <button class="btn btn-success w-100" type="submit">Registrarse</button>
                 </form>
@@ -246,7 +277,7 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="card">
-                        <form class="card-body">
+                        <form class="card-body" id="shareForm">
                             <h6 class="form-section-title">Compartir un archivo</h6>
                             <div class="mb-2">
                                 <select id="shareFile" class="form-select" required></select>
@@ -257,7 +288,7 @@
                             <div class="mb-2">
                                 <input id="shareMessage" class="form-control" type="text" placeholder="Mensaje opcional">
                             </div>
-                            <button id="shareBtn" class="btn btn-primary w-100" type="button"><i class="bi bi-send"></i> Compartir</button>
+                            <button id="shareBtn" class="btn btn-primary w-100" type="submit"><i class="bi bi-send"></i> Compartir</button>
                         </form>
                     </div>
                 </div>
@@ -330,6 +361,16 @@
                     <div class="alert alert-info mt-3">
                         <b>Recuerda:</b> ¡Nunca compartas tu contraseña! Si tienes dudas, usa el botón de ayuda.
                     </div>
+                    <hr>
+                    <h6 class="mt-3 mb-1">Desarrollador:</h6>
+                    <ul>
+                        <li><b>Nombre completo:</b> Tarciano ENZEMA NCHAMA</li>
+                        <li><b>Formación académica:</b> Finalista universitario de la UNGE</li>
+                        <li><b>Facultad:</b> Ciencias económicas gestión y administración</li>
+                        <li><b>Departamento:</b> Informática de gestión empresarial</li>
+                        <li><b>Contacto:</b> enzemajr@gmail.com</li>
+                        <li><b>Fecha final del desarrollo:</b> 06/07/2025</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -395,7 +436,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Crear carpeta</button>
+                        <button type="submit" class="btn btn-primary" id="createFolderSubmitBtn">Crear carpeta</button>
                     </div>
                 </form>
             </div>
@@ -403,11 +444,6 @@
     </div>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- App JS -->
-    <script>
-        // Insertar aquí el código JS de la aplicación
-        // (Ver siguiente bloque para el JS completo)
-    </script>
     <script src="app.js"></script>
 </body>
 </html>
