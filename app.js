@@ -17,7 +17,578 @@ document.addEventListener('DOMContentLoaded', async function() {
     const fileModal = new bootstrap.Modal(document.getElementById('fileModal'));
     const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
     const folderModal = new bootstrap.Modal(document.getElementById('folderModal'));
+//*********
+        // ==================== MODAL DE ARCHIVO: VER, COMENTAR, LIKE, DESCARGA, COMPARTIR, ELIMINAR ====================
+const likeBtn = document.getElementById('likeBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+const shareBtn = document.getElementById('shareBtn');
 
+likeBtn.addEventListener('click', () => currentFileView && toggleLike(currentFileView.id));
+downloadBtn.addEventListener('click', () => currentFileView && downloadFile(currentFileView.id));
+deleteBtn.addEventListener('click', () => {
+    showConfirmModal('Eliminar archivo', '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.', () => deleteFile(currentFileView.id));
+});
+shareBtn.addEventListener('click', () => shareFileModal(currentFileView));
+
+function viewFile(fileId, galleryIdx) {
+    getFileById(fileId).then(file => {
+        currentFileView = file;
+        let idx = galleryIdx;
+        if (typeof idx !== "number") {
+            idx = galleryFilesCache.findIndex(f => f.id == fileId);
+        }
+        renderFileModal(file, idx);
+        fileModal.show();
+    }).catch(() => {
+        showToast('Error', 'No se pudo cargar el archivo', true);
+    });
+}
+
+function renderFileModal(file, idx) {
+    document.getElementById('fileModalTitle').textContent = file.name;
+    const modalContent = document.getElementById('fileModalContent');
+    let mediaContent = '';
+    if (file.type === 'image') {
+        mediaContent = `<img src="data:image/jpeg;base64,${file.data}" class="img-fluid" alt="${file.name}" id="modalImage">`;
+    } else {
+        mediaContent = `
+            <video controls class="w-100" style="max-height:420px;" id="modalVideo">
+                <source src="data:video/mp4;base64,${file.data}" type="video/mp4">
+                Tu navegador no soporta el elemento de video.
+            </video>
+        `;
+    }
+    let navControls = '';
+    if (galleryFilesCache.length > 1) {
+        navControls = `
+            <div class="${file.type === 'image' ? 'photo-controls-bar' : 'video-controls-bar'} mb-2">
+                <button class="btn btn-outline-secondary btn-sm" id="prevMediaBtn"><i class="bi bi-arrow-left"></i> Anterior</button>
+                ${file.type === 'video' ? `
+                    <button class="btn btn-outline-secondary btn-sm" id="playBtn"><i class="bi bi-play"></i></button>
+                    <button class="btn btn-outline-secondary btn-sm" id="pauseBtn"><i class="bi bi-pause"></i></button>
+                    <button class="btn btn-outline-secondary btn-sm" id="stopBtn"><i class="bi bi-stop"></i></button>
+                    <button class="btn btn-outline-secondary btn-sm" id="backwardBtn"><i class="bi bi-skip-backward"></i></button>
+                    <button class="btn btn-outline-secondary btn-sm" id="forwardBtn"><i class="bi bi-skip-forward"></i></button>
+                ` : ''}
+                <button class="btn btn-outline-secondary btn-sm" id="nextMediaBtn">Siguiente <i class="bi bi-arrow-right"></i></button>
+            </div>
+        `;
+    } else if (file.type === 'video') {
+        navControls = `
+            <div class="video-controls-bar mb-2">
+                <button class="btn btn-outline-secondary btn-sm" id="playBtn"><i class="bi bi-play"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" id="pauseBtn"><i class="bi bi-pause"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" id="stopBtn"><i class="bi bi-stop"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" id="backwardBtn"><i class="bi bi-skip-backward"></i></button>
+                <button class="btn btn-outline-secondary btn-sm" id="forwardBtn"><i class="bi bi-skip-forward"></i></button>
+            </div>
+        `;
+    }
+    modalContent.innerHTML = `
+        ${mediaContent}
+        ${navControls}
+        <hr>
+        <div class="comments-section">
+            <h6 class="mb-2">Comentarios</h6>
+            <div id="commentsList"></div>
+            <form id="commentForm" class="d-flex mt-2">
+                <input id="commentInput" class="form-control form-control-sm me-2" type="text" placeholder="Escribe un comentario..." maxlength="300" required>
+                <button type="submit" class="btn btn-primary btn-sm">Comentar</button>
+            </form>
+        </div>
+    `;
+
+    document.getElementById('fileLikesCount').textContent = file.likes ? file.likes.length : 0;
+    document.getElementById('fileOwner').textContent = `Por: ${file.userName}`;
+    document.getElementById('fileDate').textContent = new Date(file.uploadDate).toLocaleString();
+    deleteBtn.style.display = (file.userEmail === currentUser.email || currentUser.isDeveloper) ? 'block' : 'none';
+    const isLiked = file.likes && file.likes.includes(currentUser.email);
+    likeBtn.className = isLiked ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
+    downloadBtn.style.display = (file.visibility === 'public' || (file.sharedWith && file.sharedWith.includes(currentUser.email)) || file.userEmail === currentUser.email) ? 'block' : 'none';
+
+    if (galleryFilesCache.length > 1) {
+        document.getElementById('prevMediaBtn').onclick = function() {
+            let newIdx = (idx - 1 + galleryFilesCache.length) % galleryFilesCache.length;
+            viewFile(galleryFilesCache[newIdx].id, newIdx);
+        };
+        document.getElementById('nextMediaBtn').onclick = function() {
+            let newIdx = (idx + 1) % galleryFilesCache.length;
+            viewFile(galleryFilesCache[newIdx].id, newIdx);
+        };
+    }
+    if (file.type === 'video') {
+        const video = document.getElementById('modalVideo');
+        if (document.getElementById('playBtn')) document.getElementById('playBtn').onclick = () => video.play();
+        if (document.getElementById('pauseBtn')) document.getElementById('pauseBtn').onclick = () => video.pause();
+        if (document.getElementById('stopBtn')) document.getElementById('stopBtn').onclick = () => { video.pause(); video.currentTime = 0; };
+        if (document.getElementById('backwardBtn')) document.getElementById('backwardBtn').onclick = () => { video.currentTime = Math.max(0, video.currentTime - 10); };
+        if (document.getElementById('forwardBtn')) document.getElementById('forwardBtn').onclick = () => { video.currentTime = Math.min(video.duration, video.currentTime + 10); };
+    }
+    loadComments(file.id);
+    document.getElementById('commentForm').onsubmit = function(e) {
+        e.preventDefault();
+        const input = document.getElementById('commentInput');
+        const content = input.value.trim();
+        if (content.length === 0) return;
+        saveComment({
+            fileId: parseInt(file.id),
+            user: currentUser.fullName,
+            email: currentUser.email,
+            comment: content,
+            date: new Date().toISOString()
+        }).then(() => {
+            input.value = '';
+            addNotification(`Nuevo comentario en el archivo <b>${file.name}</b>`);
+            logActivity('Comentario', file.name);
+            loadComments(file.id);
+        });
+    };
+}
+
+function loadComments(fileId) {
+    getCommentsByFileId(fileId).then(comments => {
+        const commentsList = document.getElementById('commentsList');
+        if (!commentsList) return;
+        if (!comments || comments.length === 0) {
+            commentsList.innerHTML = `<div class="text-muted small">No hay comentarios aún.</div>`;
+            return;
+        }
+        commentsList.innerHTML = '';
+        comments.sort((a,b)=>new Date(a.date)-new Date(b.date));
+        comments.forEach(comment => {
+            const div = document.createElement('div');
+            div.className = "comment-item d-flex align-items-center gap-2 mb-2";
+            // Mostrar avatar si existe
+            let avatarSrc = "default-avatar.png";
+            if (comment.email && comment.email !== currentUser.email) {
+                getUserByEmail(comment.email).then(user => {
+                    if (user && user.avatar) div.querySelector('img').src = user.avatar;
+                });
+            }
+            // Avatar propio
+            if (comment.email === currentUser.email && currentUser.avatar) avatarSrc = currentUser.avatar;
+            div.innerHTML = `
+                <img src="${avatarSrc}" class="avatar-xs border" style="margin-right:5px;">
+                <div>
+                    <strong>${comment.user}</strong>
+                    <span class="text-muted small">${new Date(comment.date).toLocaleString()}</span>
+                    <div>${comment.comment}</div>
+                    ${comment.email === currentUser.email || currentUser.isDeveloper
+                        ? `<button class="btn btn-link text-danger btn-sm p-0" onclick="window.deleteCommentFromModal(${comment.id}, ${fileId})"><i class="bi bi-x-circle"></i></button>`
+                        : ''}
+                </div>
+            `;
+            commentsList.appendChild(div);
+        });
+        window.deleteCommentFromModal = function(commentId, fileId) {
+            deleteComment(commentId).then(() => loadComments(fileId));
+        }
+    });
+}
+
+// ==================== LIKE, DESCARGA, ELIMINAR ====================
+function toggleLike(fileId) {
+    getFileById(fileId).then(file => {
+        file.likes = file.likes || [];
+        if (file.likes.includes(currentUser.email)) {
+            file.likes = file.likes.filter(email => email !== currentUser.email);
+        } else {
+            file.likes.push(currentUser.email);
+        }
+        return updateFile(file.id, { likes: file.likes });
+    }).then(() => {
+        loadGalleryFiles();
+        if (currentFileView && currentFileView.id == fileId) viewFile(fileId);
+    });
+}
+function downloadFile(fileId) {
+    getFileById(fileId).then(file => {
+        const a = document.createElement('a');
+        a.href = file.type === 'image'
+            ? 'data:image/jpeg;base64,'+file.data
+            : 'data:video/mp4;base64,'+file.data;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        logActivity('Descarga', file.name);
+    });
+}
+function deleteFile(fileId) {
+    deleteFileFromDB(fileId).then(() => {
+        showToast('Éxito', 'Archivo eliminado correctamente');
+        logActivity('Eliminación de archivo', fileId);
+        loadGalleryFiles();
+        fileModal.hide();
+    });
+}
+
+// ==================== COMPARTIR ARCHIVOS ====================
+function shareFileModal(file) {
+    document.getElementById('shareFileId').value = file.id;
+    document.getElementById('shareEmail').value = '';
+    new bootstrap.Modal(document.getElementById('shareModal')).show();
+}
+document.getElementById('shareForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const fileId = document.getElementById('shareFileId').value;
+    const email = document.getElementById('shareEmail').value;
+    if (!fileId || !email) {
+        showToast('Error', 'Debes seleccionar un archivo y un usuario', true);
+        return;
+    }
+    getFileById(fileId)
+        .then(file => {
+            if (!file.sharedWith) file.sharedWith = [];
+            if (file.sharedWith.includes(email)) throw new Error('Ya compartido');
+            file.sharedWith.push(email);
+            return updateFile(file.id, { sharedWith: file.sharedWith });
+        })
+        .then(() => {
+            showToast('Éxito', 'Archivo compartido correctamente');
+            addNotification(`Te han compartido un archivo: <b>${fileId}</b>`);
+            logActivity('Compartiste archivo', fileId);
+            document.getElementById('shareModal').querySelector('.btn-close').click();
+        })
+        .catch(() => showToast('Error', 'No se pudo compartir el archivo', true));
+});
+
+// ==================== GESTIÓN DE USUARIOS (SOLO DESARROLLADOR) ====================
+function loadUsersForManagement() {
+    const usersTable = document.querySelector('#usersTable tbody');
+    usersTable.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </td>
+        </tr>
+    `;
+    getAllUsers().then(users => {
+        users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        if (users.length === 0) {
+            usersTable.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <i class="bi bi-people display-6 text-muted"></i>
+                        <p class="mt-2">No hay usuarios registrados</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        usersTable.innerHTML = '';
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.fullName}</td>
+                <td>${user.email}</td>
+                <td>${user.country}</td>
+                <td>${user.phone}</td>
+                <td>
+                    <span class="badge ${user.isActive ? 'bg-success' : 'bg-danger'}">
+                        ${user.isActive ? 'Activo' : 'Inactivo'}
+                    </span>
+                    ${user.isDeveloper ? '<span class="badge bg-primary ms-1">Desarrollador</span>' : ''}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary edit-user-btn" data-user-email="${user.email}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn ${user.isActive ? 'btn-outline-danger' : 'btn-outline-success'} toggle-user-btn" data-user-email="${user.email}">
+                            <i class="bi ${user.isActive ? 'bi-lock' : 'bi-unlock'}"></i>
+                        </button>
+                        <button class="btn btn-outline-danger delete-user-btn" data-user-email="${user.email}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            usersTable.appendChild(row);
+        });
+        document.querySelectorAll('.edit-user-btn').forEach(btn => {
+            btn.addEventListener('click', function() { editUser(this.dataset.userEmail); });
+        });
+        document.querySelectorAll('.toggle-user-btn').forEach(btn => {
+            btn.addEventListener('click', function() { toggleUserStatus(this.dataset.userEmail); });
+        });
+        document.querySelectorAll('.delete-user-btn').forEach(btn => {
+            btn.addEventListener('click', function() { 
+                showConfirmModal(
+                    'Eliminar usuario',
+                    '¿Seguro que quieres eliminar este usuario? Esta acción es irreversible y eliminará también todos sus archivos y carpetas.',
+                    () => deleteUserCompletely(this.dataset.userEmail)
+                );
+            });
+        });
+    }).catch(() => {
+        usersTable.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <i class="bi bi-exclamation-triangle display-6 text-danger"></i>
+                    <p class="mt-2">Error al cargar usuarios</p>
+                </td>
+            </tr>
+        `;
+    });
+}
+function editUser(userEmail) {
+    showToast('Información', 'La edición de usuarios está en desarrollo', false);
+}
+function toggleUserStatus(userEmail) {
+    getUserByEmail(userEmail)
+        .then(user => updateUser(userEmail, { isActive: !user.isActive }))
+        .then(() => {
+            showToast('Éxito', 'Estado de usuario actualizado');
+            loadUsersForManagement();
+        })
+        .catch(() => showToast('Error', 'No se pudo actualizar el usuario', true));
+}
+function deleteUserCompletely(userEmail) {
+    getUserFiles(userEmail).then(files => {
+        let promises = files.map(f => deleteFileFromDB(f.id));
+        return Promise.all(promises);
+    }).then(() => {
+        return getUserFolders(userEmail).then(folders => {
+            let promises = folders.map(f => deleteFolder(f.id));
+            return Promise.all(promises);
+        });
+    }).then(() => {
+        return deleteUserFromDB(userEmail);
+    }).then(() => {
+        showToast('Éxito', 'Usuario eliminado correctamente');
+        loadUsersForManagement();
+    }).catch(() => showToast('Error', 'No se pudo eliminar el usuario', true));
+}
+
+// ==================== HISTORIAL Y ACTIVIDAD ====================
+function logActivity(action, details = '') {
+    activityLog.unshift({ action, details, date: new Date() });
+    renderActivityLog();
+}
+function renderActivityLog() {
+    const logPanel = document.getElementById('activityLogPanel');
+    logPanel.innerHTML = activityLog.length === 0 ? '<div class="p-3 text-muted">No hay actividad reciente</div>' :
+      '<ul class="list-group">' +
+      activityLog.map(log =>
+        `<li class="list-group-item small">${log.action} ${log.details ? '— '+log.details : ''}<br><span class="text-muted">${new Date(log.date).toLocaleString()}</span></li>`
+      ).join('') +
+      '</ul>';
+}
+
+// ==================== NOTIFICACIONES INTERNAS ====================
+function addNotification(message) {
+    notifications.unshift({ message, date: new Date(), seen: false });
+    renderNotifications();
+}
+function renderNotifications() {
+    const notifIcon = document.getElementById('notifIcon');
+    const notifPanel = document.getElementById('notifPanel');
+    const unseen = notifications.filter(n => !n.seen).length;
+    notifIcon.innerHTML = `<i class="bi bi-bell${unseen ? '-fill text-danger' : ''}"></i>${unseen ? '<span class="badge bg-danger">'+unseen+'</span>' : ''}`;
+    notifPanel.innerHTML = notifications.length === 0 ? '<div class="p-3 text-muted">Sin notificaciones</div>' :
+      notifications.map(n => `<div class="border-bottom p-2 small ${n.seen ? 'text-muted' : 'fw-bold'}">${n.message}<br><span class="small">${new Date(n.date).toLocaleString()}</span></div>`).join('');
+}
+document.getElementById('notifIcon').onclick = () => {
+    notifications.forEach(n => n.seen = true);
+    renderNotifications();
+    document.getElementById('notifPanel').style.display = 'block';
+};
+document.body.addEventListener('click', function(e){
+    if (!e.target.closest('#notifPanel') && !e.target.closest('#notifIcon')) {
+        document.getElementById('notifPanel').style.display = 'none';
+    }
+});
+
+// ==================== PERFIL USUARIO Y AVATAR ====================
+document.getElementById('userAvatar').addEventListener('click', showProfileModal);
+
+function showProfileModal() {
+    document.getElementById('profileName').value = currentUser.fullName;
+    document.getElementById('profileCountry').value = currentUser.country;
+    document.getElementById('profilePhone').value = currentUser.phone;
+    document.getElementById('profileAvatarPreview').src = currentUser.avatar || 'default-avatar.png';
+    new bootstrap.Modal(document.getElementById('profileModal')).show();
+}
+document.getElementById('profileAvatar').addEventListener('change', function() {
+    if (this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            document.getElementById('profileAvatarPreview').src = evt.target.result;
+        };
+        reader.readAsDataURL(this.files[0]);
+    }
+});
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('profileName').value.trim();
+    const country = document.getElementById('profileCountry').value;
+    const phone = document.getElementById('profilePhone').value;
+    const avatarFile = document.getElementById('profileAvatar').files[0];
+    if (avatarFile) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            updateUser(currentUser.email, { fullName: name, country, phone, avatar: evt.target.result })
+                .then(updated => {
+                    currentUser = updated;
+                    showToast('Perfil actualizado', 'Tu perfil se actualizó correctamente');
+                    document.getElementById('userAvatar').src = updated.avatar;
+                });
+        };
+        reader.readAsDataURL(avatarFile);
+    } else {
+        updateUser(currentUser.email, { fullName: name, country, phone })
+            .then(updated => {
+                currentUser = updated;
+                showToast('Perfil actualizado', 'Tu perfil se actualizó correctamente');
+            });
+    }
+});
+
+// ==================== AYUDA Y CONTACTO ====================
+const helpPanel = document.getElementById('helpPanel');
+const helpOverlay = document.getElementById('helpOverlay');
+const closeHelpBtn = document.getElementById('closeHelpBtn');
+if (closeHelpBtn) closeHelpBtn.addEventListener('click', hideHelp);
+if (helpOverlay) helpOverlay.addEventListener('click', hideHelp);
+
+function showHelp() {
+    if (helpPanel) helpPanel.style.display = 'block';
+    if (helpOverlay) helpOverlay.style.display = 'block';
+}
+function hideHelp() {
+    if (helpPanel) helpPanel.style.display = 'none';
+    if (helpOverlay) helpOverlay.style.display = 'none';
+}
+const emailHelpForm = document.getElementById('emailHelpForm');
+if (emailHelpForm)
+    emailHelpForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('helpName').value;
+        window.location.href = `mailto:soporte@tudominio.com?subject=Consulta%20de%20ayuda%20de%20${encodeURIComponent(name)}&body=Por%20favor%20escriba%20su%20consulta%20aquí...`;
+        hideHelp();
+        this.reset();
+        showToast('Éxito', 'Se ha abierto tu cliente de correo para enviar la consulta');
+    });
+const whatsappHelpForm = document.getElementById('whatsappHelpForm');
+if (whatsappHelpForm)
+    whatsappHelpForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('helpWhatsappName').value;
+        window.open(`https://wa.me/1234567890?text=Hola,%20soy%20${encodeURIComponent(name)}.%20Tengo%20una%20consulta%20sobre%20la%20aplicación...`, '_blank');
+        hideHelp();
+        this.reset();
+        showToast('Éxito', 'Se ha abierto WhatsApp para enviar tu consulta');
+    });
+
+// ==================== LOGOUT Y CAMBIO DE MÓDULOS ====================
+function logout() {
+    logActivity('Cierre de sesión');
+    currentUser = null;
+    document.getElementById('mainPanel').style.display = 'none';
+    document.getElementById('authPanel').style.display = '';
+    document.getElementById('mainNav').style.display = 'none';
+    document.getElementById('userNav').style.display = 'none';
+    showToast('Sesión cerrada', 'Has cerrado sesión correctamente');
+}
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+// Cambiar entre módulos/pestañas principales
+function switchModule(moduleName) {
+    const modules = ['galleryModule', 'foldersModule', 'shareModule', 'usersModule', 'activityModule'];
+    modules.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const active = document.getElementById(moduleName + 'Module');
+    if (active) active.style.display = '';
+    document.querySelectorAll('.main-nav-link').forEach(link => link.classList.remove('active'));
+    const navLink = document.querySelector(`.main-nav-link[data-module="${moduleName}"]`);
+    if (navLink) navLink.classList.add('active');
+}
+document.querySelectorAll('.main-nav-link').forEach(link => {
+    link.addEventListener('click', function() {
+        switchModule(this.dataset.module);
+    });
+});
+
+// ==================== PANEL PRINCIPAL: MOSTRAR AL INICIAR SESIÓN ====================
+function showMainPanel(user) {
+    currentUser = user;
+    document.getElementById('authPanel').style.display = 'none';
+    document.getElementById('mainPanel').style.display = '';
+    document.getElementById('mainNav').style.display = '';
+    document.getElementById('userNav').style.display = '';
+    document.getElementById('userNameNav').textContent = user.fullName;
+    document.getElementById('userAvatar').src = user.avatar || 'default-avatar.png';
+    document.getElementById('navUsers').style.display = user.isDeveloper ? '' : 'none';
+    switchModule('gallery');
+    loadUserFolders();
+    loadGalleryFiles();
+    loadSharedFiles();
+    renderNotifications();
+    renderActivityLog();
+    if (user.isDeveloper) loadUsersForManagement();
+}
+
+// ==================== ARCHIVOS COMPARTIDOS CONMIGO ====================
+function loadSharedFiles() {
+    const sharedFilesTable = document.querySelector('#sharedFilesTable tbody');
+    sharedFilesTable.innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </td>
+        </tr>
+    `;
+    getAllFiles().then(files => {
+        const sharedFiles = files.filter(file => file.sharedWith && file.sharedWith.includes(currentUser.email));
+        if (sharedFiles.length === 0) {
+            sharedFilesTable.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center py-4">
+                        <i class="bi bi-folder-x display-6 text-muted"></i>
+                        <p class="mt-2">No tienes archivos compartidos</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        sharedFilesTable.innerHTML = '';
+        sharedFiles.forEach(file => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${file.name}</td>
+                <td>${file.userName}</td>
+                <td>${new Date(file.uploadDate).toLocaleString()}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary view-shared-btn" data-file-id="${file.id}">
+                        <i class="bi bi-eye"></i> Ver
+                    </button>
+                </td>
+            `;
+            sharedFilesTable.appendChild(row);
+        });
+        document.querySelectorAll('.view-shared-btn').forEach(btn => {
+            btn.addEventListener('click', function() { viewFile(this.dataset.fileId); });
+        });
+    }).catch(() => {
+        sharedFilesTable.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4">
+                    <i class="bi bi-exclamation-triangle display-6 text-danger"></i>
+                    <p class="mt-2">Error al cargar archivos compartidos</p>
+                </td>
+            </tr>
+        `;
+    });
+}
     // ==================== BASE DE DATOS ====================
     await initDB();
 
@@ -602,134 +1173,8 @@ function loadGalleryFiles() {
 // ...El resto de fragmentos como modal de archivo, comentarios, compartir archivos, gestión de usuarios, historial, actividad, perfil, notificaciones, ayuda, logout y cambio de módulos debe ir a continuación.
 // Si deseas, te lo sigo extendiendo funcionalmente, sólo dímelo.
 //**************
-// ==================== PANEL PRINCIPAL: INICIALIZACIÓN Y CARGA DE SECCIONES ====================
-function showMainPanel(user) {
-    currentUser = user;
-    document.getElementById('authPanel').style.display = 'none';
-    document.getElementById('mainPanel').style.display = '';
-    document.getElementById('mainNav').style.display = '';
-    document.getElementById('userNav').style.display = '';
-    document.getElementById('userNameNav').textContent = user.fullName;
-    document.getElementById('userAvatar').src = user.avatar || 'default-avatar.png';
-    document.getElementById('navUsers').style.display = user.isDeveloper ? '' : 'none';
-    switchModule('gallery');
-    loadUserFolders();
-    loadGalleryFiles();
-    loadSharedFiles();
-    renderNotifications();
-    renderActivityLog();
-    if (user.isDeveloper) loadUsersForManagement();
-}
 
-// ==================== PANEL DE CARPETAS (LISTADO SIMPLE) ====================
-function loadFoldersModule() {
-    const foldersList = document.getElementById('foldersList');
-    foldersList.innerHTML = `
-        <div class="text-center py-3">
-            <div class="spinner-border spinner-border-sm" role="status">
-                <span class="visually-hidden">Cargando...</span>
-            </div>
-        </div>
-    `;
-    getUserFolders(currentUser.email)
-        .then(folders => {
-            if (!folders.length) {
-                foldersList.innerHTML = '<div class="text-muted py-3">No tienes carpetas creadas</div>';
-                return;
-            }
-            foldersList.innerHTML = folders.map(folder => `
-                <div class="card mb-2">
-                    <div class="card-body d-flex align-items-center justify-content-between">
-                        <span>
-                            <i class="bi bi-folder${folder.visibility === 'private' ? '-fill' : ''} me-2"></i>
-                            <strong>${folder.name}</strong>
-                            <small class="text-muted ms-2">${folder.visibility === 'private' ? 'Privada' : 'Pública'}</small>
-                        </span>
-                        <span>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteFolderUI(${folder.id})" title="Eliminar"><i class="bi bi-trash"></i></button>
-                        </span>
-                    </div>
-                </div>
-            `).join('');
-        });
-}
-window.deleteFolderUI = function(folderId) {
-    showConfirmModal('Eliminar carpeta', '¿Seguro que quieres eliminar esta carpeta y sus archivos?', function() {
-        getFilesInFolder(folderId).then(files => {
-            return Promise.all(files.map(f => deleteFileFromDB(f.id)));
-        }).then(() => deleteFolder(folderId))
-        .then(() => {
-            showToast('Éxito', 'Carpeta y archivos eliminados');
-            loadFoldersModule();
-            loadUserFolders();
-            loadGalleryFiles();
-        });
-    });
-};
-// Carga automática del módulo de carpetas cuando corresponde
-document.querySelector('.main-nav-link[data-module="folders"]').addEventListener('click', loadFoldersModule);
 
-// ==================== ACCESO RÁPIDO A MI ACTIVIDAD ====================
-document.querySelector('.main-nav-link[data-module="activity"]').addEventListener('click', renderActivityLog);
-
-// ==================== CAMBIO DE MÓDULO AL VOLVER AL PANEL PRINCIPAL ====
-document.querySelector('.main-nav-link[data-module="gallery"]').addEventListener('click', function() {
-    loadUserFolders();
-    loadGalleryFiles();
-});
-
-// ==================== MANEJO DE FOCUS EN CAMPOS ====================
-document.getElementById('loginEmail').focus();
-
-// ==================== ACCESIBILIDAD Y USABILIDAD: TECLAS RÁPIDAS ====================
-document.addEventListener('keydown', function(e) {
-    if (!currentUser) return;
-    // Alt+1: Galería, Alt+2: Carpetas, Alt+3: Compartidos, Alt+4: Actividad, Alt+5: Perfil
-    if (e.altKey) {
-        if (e.key === "1") { switchModule('gallery'); }
-        if (e.key === "2") { switchModule('folders'); loadFoldersModule(); }
-        if (e.key === "3") { switchModule('share'); loadSharedFiles(); }
-        if (e.key === "4") { switchModule('activity'); renderActivityLog(); }
-        if (e.key === "5") { showProfileModal(); }
-    }
-});
-
-// ==================== MODO OSCURO SIMPLE (BONUS ELEGANCIA) ====================
-const darkModeBtn = document.createElement('button');
-darkModeBtn.className = "btn btn-sm btn-outline-secondary";
-darkModeBtn.innerHTML = '<i class="bi bi-moon"></i>';
-darkModeBtn.title = "Modo oscuro";
-document.getElementById('userNav').insertBefore(darkModeBtn, document.getElementById('logoutBtn'));
-let darkMode = false;
-darkModeBtn.onclick = function() {
-    darkMode = !darkMode;
-    document.body.classList.toggle('bg-dark', darkMode);
-    document.body.classList.toggle('text-light', darkMode);
-    darkModeBtn.innerHTML = darkMode ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
-    darkModeBtn.title = darkMode ? "Modo claro" : "Modo oscuro";
-};
-
-// ==================== PREVENCIÓN DE ERRORES Y USABILIDAD ====================
-// Evita doble submit en formularios
-document.querySelectorAll('form').forEach(f => {
-    f.addEventListener('submit', function(e) {
-        if (f.dataset.submitted) e.preventDefault();
-        f.dataset.submitted = 'true';
-        setTimeout(() => { f.dataset.submitted = ''; }, 2000);
-    });
-});
-
-// ==================== OPTIMIZACIÓN FINAL: LIMPIA CAMPOS AL ABRIR MODALES ====================
-['folderModal', 'profileModal', 'shareModal'].forEach(id => {
-    const modalEl = document.getElementById(id);
-    if (!modalEl) return;
-    modalEl.addEventListener('show.bs.modal', function() {
-        this.querySelectorAll('input,select').forEach(inp => { if (inp.type !== "hidden") inp.value = ""; });
-        if (id === 'profileModal') {
-            document.getElementById('profileAvatarPreview').src = currentUser.avatar || 'default-avatar.png';
-        }
-    });
-});
   //**********
   
 });
