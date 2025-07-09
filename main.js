@@ -1,4 +1,3 @@
-
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', function() {
     // Variables globales
@@ -105,74 +104,88 @@ document.addEventListener('DOMContentLoaded', function() {
     const helpOverlay = document.getElementById('helpOverlay');
     const closeHelpBtn = document.getElementById('closeHelpBtn');
     
-    helpBtn.addEventListener('click', function() {
-        helpPanel.style.display = 'block';
-        helpOverlay.style.display = 'block';
-    });
+    if (helpBtn) {
+        helpBtn.addEventListener('click', function() {
+            helpPanel.style.display = 'block';
+            helpOverlay.style.display = 'block';
+        });
+    }
     
-    closeHelpBtn.addEventListener('click', function() {
-        helpPanel.style.display = 'none';
-        helpOverlay.style.display = 'none';
-    });
+    if (closeHelpBtn) {
+        closeHelpBtn.addEventListener('click', function() {
+            helpPanel.style.display = 'none';
+            helpOverlay.style.display = 'none';
+        });
+    }
     
-    helpOverlay.addEventListener('click', function() {
-        helpPanel.style.display = 'none';
-        helpOverlay.style.display = 'none';
-    });
+    if (helpOverlay) {
+        helpOverlay.addEventListener('click', function() {
+            helpPanel.style.display = 'none';
+            helpOverlay.style.display = 'none';
+        });
+    }
     
     // Manejar el formulario de ayuda por email
     const emailHelpForm = document.getElementById('emailHelpForm');
-    emailHelpForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const name = document.getElementById('helpName').value;
-        const email = document.getElementById('helpEmail').value;
-        
-        // Abrir cliente de email
-        window.location.href = `mailto:enzemajr@gmail.com?subject=Consulta%20de%20ayuda%20de%20${encodeURIComponent(name)}&body=Por%20favor%20escriba%20su%20consulta%20aqu%C3%AD...`;
-        
-        // Cerrar panel de ayuda
-        helpPanel.style.display = 'none';
-        helpOverlay.style.display = 'none';
-        
-        // Limpiar formulario
-        emailHelpForm.reset();
-        
-        showToast('Éxito', 'Se ha abierto tu cliente de correo para enviar la consulta');
-    });
+    if (emailHelpForm) {
+        emailHelpForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('helpName').value;
+            const email = document.getElementById('helpEmail').value;
+            
+            // Abrir cliente de email
+            window.location.href = `mailto:enzemajr@gmail.com?subject=Consulta%20de%20ayuda%20de%20${encodeURIComponent(name)}&body=Por%20favor%20escriba%20su%20consulta%20aqu%C3%AD...`;
+            
+            // Cerrar panel de ayuda
+            helpPanel.style.display = 'none';
+            helpOverlay.style.display = 'none';
+            
+            // Limpiar formulario
+            emailHelpForm.reset();
+            
+            showToast('Éxito', 'Se ha abierto tu cliente de correo para enviar la consulta');
+        });
+    }
     
     // Manejar el formulario de ayuda por WhatsApp
     const whatsappHelpForm = document.getElementById('whatsappHelpForm');
-    whatsappHelpForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const name = document.getElementById('helpWhatsappName').value;
-        const number = document.getElementById('helpWhatsappNumber').value;
-        
-        // Abrir WhatsApp
-        window.open(`https://wa.me/+240222084663?text=Hola,%20soy%20${encodeURIComponent(name)}.%20Tengo%20una%20consulta%20sobre%20mYpuB...`, '_blank');
-        
-        // Cerrar panel de ayuda
-        helpPanel.style.display = 'none';
-        helpOverlay.style.display = 'none';
-        
-        // Limpiar formulario
-        whatsappHelpForm.reset();
-        
-        showToast('Éxito', 'Se ha abierto WhatsApp para enviar tu consulta');
-    });
+    if (whatsappHelpForm) {
+        whatsappHelpForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('helpWhatsappName').value;
+            const number = document.getElementById('helpWhatsappNumber').value;
+            
+            // Abrir WhatsApp
+            window.open(`https://wa.me/+240222084663?text=Hola,%20soy%20${encodeURIComponent(name)}.%20Tengo%20una%20consulta%20sobre%20mYpuB...`, '_blank');
+            
+            // Cerrar panel de ayuda
+            helpPanel.style.display = 'none';
+            helpOverlay.style.display = 'none';
+            
+            // Limpiar formulario
+            whatsappHelpForm.reset();
+            
+            showToast('Éxito', 'Se ha abierto WhatsApp para enviar tu consulta');
+        });
+    }
     
     // Validar contraseña en tiempo real
     const passwordInput = document.getElementById('password');
-    passwordInput.addEventListener('input', function() {
-        validatePassword(this.value);
-    });
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            validatePassword(this.value);
+        });
+    }
     
     // Manejar cambio de país para actualizar prefijo telefónico
     const countrySelect = document.getElementById('country');
-    countrySelect.addEventListener('change', function() {
-        updatePhonePrefix();
-    });
+    if (countrySelect) {
+        countrySelect.addEventListener('change', function() {
+            updatePhonePrefix();
+        });
+    }
     
     // Manejar cierre de sesión
     const logoutBtn = document.getElementById('logoutBtn');
@@ -187,42 +200,50 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectFilesBtn = document.getElementById('selectFilesBtn');
     const uploadDropzone = document.getElementById('uploadDropzone');
     
-    selectFilesBtn.addEventListener('click', function() {
-        fileInput.click();
-    });
+    if (selectFilesBtn) {
+        selectFilesBtn.addEventListener('click', function() {
+            fileInput.click();
+        });
+    }
     
-    fileInput.addEventListener('change', function() {
-        handleFileSelection(this.files);
-    });
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            handleFileSelection(this.files);
+        });
+    }
     
     // Manejar drag and drop
-    uploadDropzone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        this.classList.add('active');
-    });
-    
-    uploadDropzone.addEventListener('dragleave', function() {
-        this.classList.remove('active');
-    });
-    
-    uploadDropzone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        this.classList.remove('active');
+    if (uploadDropzone) {
+        uploadDropzone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+        });
         
-        if (e.dataTransfer.files.length > 0) {
-            handleFileSelection(e.dataTransfer.files);
-        }
-    });
-    
-    uploadDropzone.addEventListener('click', function() {
-        fileInput.click();
-    });
+        uploadDropzone.addEventListener('dragleave', function() {
+            this.classList.remove('active');
+        });
+        
+        uploadDropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files);
+            }
+        });
+        
+        uploadDropzone.addEventListener('click', function() {
+            fileInput.click();
+        });
+    }
     
     // Manejar subida de archivos
     const uploadFilesBtn = document.getElementById('uploadFilesBtn');
-    uploadFilesBtn.addEventListener('click', function() {
-        uploadSelectedFiles();
-    });
+    if (uploadFilesBtn) {
+        uploadFilesBtn.addEventListener('click', function() {
+            uploadSelectedFiles();
+        });
+    }
     
     // Manejar navegación entre módulos
     const moduleLinks = document.querySelectorAll('[data-module]');
@@ -235,53 +256,75 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Manejar búsqueda en galería
     const searchBtn = document.getElementById('searchBtn');
-    searchBtn.addEventListener('click', function() {
-        loadGalleryFiles();
-    });
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function() {
+            loadGalleryFiles();
+        });
+    }
     
     const gallerySearch = document.getElementById('gallerySearch');
-    gallerySearch.addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') {
-            loadGalleryFiles();
-        }
-    });
+    if (gallerySearch) {
+        gallerySearch.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                loadGalleryFiles();
+            }
+        });
+    }
     
     // Manejar like en archivo
     const likeBtn = document.getElementById('likeBtn');
-    likeBtn.addEventListener('click', function() {
-        toggleLike(currentFileView.id);
-    });
+    if (likeBtn) {
+        likeBtn.addEventListener('click', function() {
+            toggleLike(currentFileView.id);
+        });
+    }
     
     // Manejar descarga de archivo
     const downloadBtn = document.getElementById('downloadBtn');
-    downloadBtn.addEventListener('click', function() {
-        downloadFile(currentFileView.id);
-    });
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function() {
+            downloadFile(currentFileView.id);
+        });
+    }
     
     // Manejar eliminación de archivo
     const deleteBtn = document.getElementById('deleteBtn');
-    deleteBtn.addEventListener('click', function() {
-        showConfirmModal(
-            'Eliminar archivo',
-            '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.',
-            () => deleteFile(currentFileView.id)
-        );
-    });
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            showConfirmModal(
+                'Eliminar archivo',
+                '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.',
+                () => deleteFile(currentFileView.id)
+            );
+        });
+    }
     
     // Manejar compartir archivo
     const shareBtn = document.getElementById('shareBtn');
-    shareBtn.addEventListener('click', function() {
-        shareFile();
-    });
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function() {
+            shareFile();
+        });
+    }
+    
+    // Manejar alternar privacidad de archivo
+    const togglePrivateBtn = document.getElementById('togglePrivateBtn');
+    if (togglePrivateBtn) {
+        togglePrivateBtn.addEventListener('click', function() {
+            toggleFilePrivacy(currentFileView.id);
+        });
+    }
     
     // Manejar confirmación de acciones
     const confirmActionBtn = document.getElementById('confirmActionBtn');
-    confirmActionBtn.addEventListener('click', function() {
-        if (currentAction && typeof currentAction === 'function') {
-            currentAction();
-        }
-        confirmModal.hide();
-    });
+    if (confirmActionBtn) {
+        confirmActionBtn.addEventListener('click', function() {
+            if (currentAction && typeof currentAction === 'function') {
+                currentAction();
+            }
+            confirmModal.hide();
+        });
+    }
     
     // Función para cargar países (lista estática)
     function loadCountries() {
@@ -291,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {name: "Alemania", prefix: "+49"},
             {name: "Andorra", prefix: "+376"},
             {name: "Angola", prefix: "+244"},
-            {name: "Antigua y Barbuda", prefix: "+1 268"},
+            {name: "Antigua y Barbuda", prefix: "+1268"},
             {name: "Arabia Saudita", prefix: "+966"},
             {name: "Argelia", prefix: "+213"},
             {name: "Argentina", prefix: "+54"},
@@ -299,9 +342,9 @@ document.addEventListener('DOMContentLoaded', function() {
             {name: "Australia", prefix: "+61"},
             {name: "Austria", prefix: "+43"},
             {name: "Azerbaiyán", prefix: "+994"},
-            {name: "Bahamas", prefix: "+1 242"},
+            {name: "Bahamas", prefix: "+1242"},
             {name: "Bangladés", prefix: "+880"},
-            {name: "Barbados", prefix: "+1 246"},
+            {name: "Barbados", prefix: "+1246"},
             {name: "Baréin", prefix: "+973"},
             {name: "Bélgica", prefix: "+32"},
             {name: "Belice", prefix: "+501"},
@@ -336,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {name: "Croacia", prefix: "+385"},
             {name: "Cuba", prefix: "+53"},
             {name: "Dinamarca", prefix: "+45"},
-            {name: "Dominica", prefix: "+1 767"},
+            {name: "Dominica", prefix: "+1767"},
             {name: "Ecuador", prefix: "+593"},
             {name: "Egipto", prefix: "+20"},
             {name: "El Salvador", prefix: "+503"},
@@ -356,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {name: "Gambia", prefix: "+220"},
             {name: "Georgia", prefix: "+995"},
             {name: "Ghana", prefix: "+233"},
-            {name: "Granada", prefix: "+1 473"},
+            {name: "Granada", prefix: "+1473"},
             {name: "Grecia", prefix: "+30"},
             {name: "Guatemala", prefix: "+502"},
             {name: "Guinea", prefix: "+224"},
@@ -376,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {name: "Islas Salomón", prefix: "+677"},
             {name: "Israel", prefix: "+972"},
             {name: "Italia", prefix: "+39"},
-            {name: "Jamaica", prefix: "+1 876"},
+            {name: "Jamaica", prefix: "+1876"},
             {name: "Japón", prefix: "+81"},
             {name: "Jordania", prefix: "+962"},
             {name: "Kazajistán", prefix: "+7"},
@@ -433,15 +476,15 @@ document.addEventListener('DOMContentLoaded', function() {
             {name: "República Checa", prefix: "+420"},
             {name: "República del Congo", prefix: "+242"},
             {name: "República Democrática del Congo", prefix: "+243"},
-            {name: "República Dominicana", prefix: "+1 809, +1 829, +1 849"},
+            {name: "República Dominicana", prefix: "+1809"},
             {name: "Ruanda", prefix: "+250"},
             {name: "Rumanía", prefix: "+40"},
             {name: "Rusia", prefix: "+7"},
             {name: "Samoa", prefix: "+685"},
-            {name: "San Cristóbal y Nieves", prefix: "+1 869"},
+            {name: "San Cristóbal y Nieves", prefix: "+1869"},
             {name: "San Marino", prefix: "+378"},
-            {name: "San Vicente y las Granadinas", prefix: "+1 784"},
-            {name: "Santa Lucía", prefix: "+1 758"},
+            {name: "San Vicente y las Granadinas", prefix: "+1784"},
+            {name: "Santa Lucía", prefix: "+1758"},
             {name: "Santo Tomé y Príncipe", prefix: "+239"},
             {name: "Senegal", prefix: "+221"},
             {name: "Serbia", prefix: "+381"},
@@ -464,8 +507,8 @@ document.addEventListener('DOMContentLoaded', function() {
             {name: "Timor Oriental", prefix: "+670"},
             {name: "Togo", prefix: "+228"},
             {name: "Tonga", prefix: "+676"},
-            {name: "Trinidad y Tobago", prefix: "+1 868"},
-            {name: "Túnez", prefix: "+216"},
+            {name: "Trinidad y Tobago", prefix: "+1868"},
+            {name: "Túnis", prefix: "+216"},
             {name: "Turkmenistán", prefix: "+993"},
             {name: "Turquía", prefix: "+90"},
             {name: "Tuvalu", prefix: "+688"},
@@ -483,6 +526,8 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         const countrySelect = document.getElementById('country');
+        
+        if (!countrySelect) return;
         
         // Limpiar opciones existentes
         countrySelect.innerHTML = '';
@@ -502,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
         countries.forEach(country => {
             const option = document.createElement('option');
             option.value = country.name;
-            option.dataset.prefix = country.prefix;
+            option.dataset.prefix = country.prefix.replace(/\s+/g, ''); // Eliminar espacios en blanco del prefijo
             option.textContent = `${country.name} (${country.prefix})`;
             countrySelect.appendChild(option);
         });
@@ -511,14 +556,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Actualizar prefijo telefónico según país seleccionado
     function updatePhonePrefix() {
         const countrySelect = document.getElementById('country');
+        const phoneInput = document.getElementById('phone');
+        
+        if (!countrySelect || !phoneInput) return;
+        
         const selectedOption = countrySelect.options[countrySelect.selectedIndex];
         const phonePrefix = document.querySelector('.input-group-text');
         
         if (selectedOption.dataset.prefix) {
             phonePrefix.textContent = selectedOption.dataset.prefix;
+            
+            // Si el campo de teléfono está vacío o empieza con un prefijo diferente, establecer el nuevo prefijo
+            if (!phoneInput.value || !phoneInput.value.startsWith(selectedOption.dataset.prefix)) {
+                phoneInput.value = selectedOption.dataset.prefix;
+            }
         } else {
             phonePrefix.textContent = '+';
         }
+        
+        // Enfocar el campo de teléfono
+        phoneInput.focus();
+        
+        // Mover el cursor al final del valor
+        phoneInput.selectionStart = phoneInput.selectionEnd = phoneInput.value.length;
     }
     
     // Validar formulario de registro
@@ -560,9 +620,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Validar teléfono
-        const phoneRegex = /^\d{6,15}$/; // Solo números, entre 6 y 15 dígitos
+        const phoneRegex = /^\+\d{1,4}\d{6,15}$/; // Prefijo + números
         if (!phoneRegex.test(phone)) {
-            showToast('Error', 'Por favor ingresa un número de teléfono válido (solo números)', true);
+            showToast('Error', 'Por favor ingresa un número de teléfono válido (con prefijo internacional)', true);
             return false;
         }
         
@@ -585,8 +645,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const passwordStrength = document.getElementById('passwordStrength');
         const passwordInput = document.getElementById('password');
         
-        // Expresión regular para contraseña normal
-        const normalPasswordRegex = /^(?=.*[A-Z])(?=.*[a-z]{5})(?=.*\d{4})(?=.*[@#&]{2}).{12}$/;
+        if (!passwordStrength || !passwordInput) return false;
+        
         // Contraseña de desarrollador
         const devPassword = DEV_PASSWORD;
         
@@ -600,6 +660,8 @@ document.addEventListener('DOMContentLoaded', function() {
             isDev = true;
             strength = 5;
         } else {
+            // Expresión regular para contraseña normal
+            const normalPasswordRegex = /^(?=.*[A-Z])(?=.*[a-z]{5})(?=.*\d{4})(?=.*[@#&]{2}).{12}$/;
             isValid = normalPasswordRegex.test(password);
             
             // Calcular fortaleza de la contraseña (simplificado)
@@ -633,17 +695,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mostrar mensaje de bienvenida
         const welcomeMessage = document.getElementById('welcomeMessage');
-        const saludo = user.gender === 'male' ? 'Sr.' : 'Sra.';
-        welcomeMessage.textContent = `Bienvenid${user.gender === 'male' ? 'o' : 'a'} a mYpuB ${saludo} ${user.fullName}`;
+        if (welcomeMessage) {
+            const saludo = user.gender === 'male' ? 'Sr.' : 'Sra.';
+            welcomeMessage.textContent = `Bienvenid${user.gender === 'male' ? 'o' : 'a'} a mYpuB ${saludo} ${user.fullName}`;
+        }
         
         // Mostrar avatar de usuario
         const userAvatar = document.getElementById('userAvatar');
-        const initials = user.fullName.split(' ').map(name => name[0]).join('').toUpperCase();
-        userAvatar.textContent = initials.substring(0, 2);
+        if (userAvatar) {
+            const initials = user.fullName.split(' ').map(name => name[0]).join('').toUpperCase();
+            userAvatar.textContent = initials.substring(0, 2);
+        }
         
         // Mostrar módulo de usuarios si es desarrollador
         if (user.isDeveloper) {
-            document.getElementById('usersModuleLink').style.display = 'block';
+            const usersModuleLink = document.getElementById('usersModuleLink');
+            if (usersModuleLink) {
+                usersModuleLink.style.display = 'block';
+            }
         }
         
         // Cargar módulo inicial
@@ -678,20 +747,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Activar la pestaña seleccionada
-        document.getElementById(`${moduleName}Module`).classList.add('active');
+        const moduleTab = document.getElementById(`${moduleName}Module`);
+        if (moduleTab) {
+            moduleTab.classList.add('active');
+        }
         
         // Activar el enlace seleccionado
-        document.querySelector(`[data-module="${moduleName}"]`).classList.add('active');
+        const moduleLink = document.querySelector(`[data-module="${moduleName}"]`);
+        if (moduleLink) {
+            moduleLink.classList.add('active');
+        }
         
         // Cargar contenido según el módulo
         switch (moduleName) {
             case 'upload':
                 // Resetear selección de archivos
                 selectedFiles = [];
-                fileInput.value = '';
-                uploadFilesBtn.disabled = true;
-                document.getElementById('uploadStatus').textContent = '';
-                document.getElementById('uploadProgress').style.display = 'none';
+                if (fileInput) fileInput.value = '';
+                if (uploadFilesBtn) uploadFilesBtn.disabled = true;
+                const uploadStatus = document.getElementById('uploadStatus');
+                if (uploadStatus) uploadStatus.textContent = '';
+                const uploadProgress = document.getElementById('uploadProgress');
+                if (uploadProgress) uploadProgress.style.display = 'none';
                 break;
                 
             case 'gallery':
@@ -705,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
                 
             case 'users':
-                if (currentUser.isDeveloper) {
+                if (currentUser && currentUser.isDeveloper) {
                     loadUsersForManagement();
                 }
                 break;
@@ -730,11 +807,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (selectedFiles.length > 0) {
-            uploadFilesBtn.disabled = false;
-            document.getElementById('uploadStatus').textContent = `Seleccionados ${selectedFiles.length} archivo(s)`;
+            if (uploadFilesBtn) uploadFilesBtn.disabled = false;
+            const uploadStatus = document.getElementById('uploadStatus');
+            if (uploadStatus) uploadStatus.textContent = `Seleccionados ${selectedFiles.length} archivo(s)`;
         } else {
-            uploadFilesBtn.disabled = true;
-            document.getElementById('uploadStatus').textContent = 'No hay archivos seleccionados';
+            if (uploadFilesBtn) uploadFilesBtn.disabled = true;
+            const uploadStatus = document.getElementById('uploadStatus');
+            if (uploadStatus) uploadStatus.textContent = 'No hay archivos seleccionados';
         }
     }
     
@@ -742,13 +821,21 @@ document.addEventListener('DOMContentLoaded', function() {
     function uploadSelectedFiles() {
         if (selectedFiles.length === 0) return;
         
-        const visibility = document.getElementById('fileVisibility').value;
-        const description = document.getElementById('fileDescription').value;
-        const isPrivate = document.getElementById('filePrivate').checked; // Nueva opción de privacidad
+        const visibilitySelect = document.getElementById('fileVisibility');
+        const descriptionInput = document.getElementById('fileDescription');
+        const privateCheckbox = document.getElementById('filePrivate');
         
-        const progressBar = document.getElementById('uploadProgress').querySelector('.progress-bar');
-        document.getElementById('uploadProgress').style.display = 'block';
-        progressBar.style.width = '0%';
+        if (!visibilitySelect || !descriptionInput || !privateCheckbox) return;
+        
+        const visibility = visibilitySelect.value;
+        const description = descriptionInput.value;
+        const isPrivate = privateCheckbox.checked;
+        
+        const progressBar = document.getElementById('uploadProgress')?.querySelector('.progress-bar');
+        const uploadProgress = document.getElementById('uploadProgress');
+        
+        if (uploadProgress) uploadProgress.style.display = 'block';
+        if (progressBar) progressBar.style.width = '0%';
         
         let uploadCount = 0;
         
@@ -769,23 +856,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     likes: [],
                     downloads: 0,
                     sharedWith: [],
-                    isPrivate: isPrivate // Nueva propiedad para archivos privados
+                    isPrivate: isPrivate
                 };
                 
                 saveFile(fileData)
                     .then(() => {
                         uploadCount++;
                         const progress = Math.round((uploadCount / selectedFiles.length) * 100);
-                        progressBar.style.width = `${progress}%`;
+                        if (progressBar) progressBar.style.width = `${progress}%`;
                         
                         if (uploadCount === selectedFiles.length) {
-                            document.getElementById('uploadStatus').textContent = 'Todos los archivos se han subido correctamente';
-                            uploadFilesBtn.disabled = true;
+                            const uploadStatus = document.getElementById('uploadStatus');
+                            if (uploadStatus) uploadStatus.textContent = 'Todos los archivos se han subido correctamente';
+                            if (uploadFilesBtn) uploadFilesBtn.disabled = true;
                             selectedFiles = [];
-                            fileInput.value = '';
+                            if (fileInput) fileInput.value = '';
                             
                             // Recargar la galería si está activa
-                            if (document.getElementById('galleryModule').classList.contains('active')) {
+                            const galleryModule = document.getElementById('galleryModule');
+                            if (galleryModule && galleryModule.classList.contains('active')) {
                                 loadGalleryFiles();
                             }
                             
@@ -804,8 +893,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Cargar archivos para la galería
     function loadGalleryFiles() {
-        const searchTerm = document.getElementById('gallerySearch').value.toLowerCase();
         const galleryFiles = document.getElementById('galleryFiles');
+        if (!galleryFiles) return;
         
         galleryFiles.innerHTML = `
             <div class="col-12 text-center py-5">
@@ -815,6 +904,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p class="mt-2">Cargando galería...</p>
             </div>
         `;
+        
+        const gallerySearch = document.getElementById('gallerySearch');
+        const searchTerm = gallerySearch ? gallerySearch.value.toLowerCase() : '';
         
         getAllFiles()
             .then(files => {
@@ -985,6 +1077,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const deleteBtn = document.getElementById('deleteBtn');
                 const togglePrivateBtn = document.getElementById('togglePrivateBtn');
                 
+                if (!modalTitle || !modalContent || !likesCount || !fileOwner || !fileDate) return;
+                
                 modalTitle.textContent = file.name;
                 
                 if (file.type === 'image') {
@@ -1003,22 +1097,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 fileDate.textContent = new Date(file.uploadDate).toLocaleString();
                 
                 // Mostrar botón de eliminar solo para el propietario o desarrollador
-                deleteBtn.style.display = (file.userEmail === currentUser.email || currentUser.isDeveloper) ? 'block' : 'none';
+                if (deleteBtn) {
+                    deleteBtn.style.display = (file.userEmail === currentUser.email || currentUser.isDeveloper) ? 'block' : 'none';
+                }
                 
                 // Configurar botón de like
-                const isLiked = file.likes.includes(currentUser.email);
-                likeBtn.className = isLiked ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
+                if (likeBtn) {
+                    const isLiked = file.likes.includes(currentUser.email);
+                    likeBtn.className = isLiked ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
+                }
                 
                 // Mostrar botón de descarga solo si es público o el usuario es el propietario
-                downloadBtn.style.display = (file.visibility === 'public' || file.userEmail === currentUser.email) ? 'block' : 'none';
+                if (downloadBtn) {
+                    downloadBtn.style.display = (file.visibility === 'public' || file.userEmail === currentUser.email) ? 'block' : 'none';
+                }
                 
                 // Configurar botón de privacidad (solo para propietario)
-                if (file.userEmail === currentUser.email) {
-                    togglePrivateBtn.style.display = 'block';
-                    togglePrivateBtn.className = file.isPrivate ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-outline-warning';
-                    togglePrivateBtn.innerHTML = `<i class="bi ${file.isPrivate ? 'bi-lock-fill' : 'bi-unlock'}"></i> ${file.isPrivate ? 'Privado' : 'Público'}`;
-                } else {
-                    togglePrivateBtn.style.display = 'none';
+                if (togglePrivateBtn) {
+                    if (file.userEmail === currentUser.email) {
+                        togglePrivateBtn.style.display = 'block';
+                        togglePrivateBtn.className = file.isPrivate ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-outline-warning';
+                        togglePrivateBtn.innerHTML = `<i class="bi ${file.isPrivate ? 'bi-lock-fill' : 'bi-unlock'}"></i> ${file.isPrivate ? 'Privado' : 'Público'}`;
+                    } else {
+                        togglePrivateBtn.style.display = 'none';
+                    }
                 }
                 
                 fileModal.show();
@@ -1051,7 +1153,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Recargar la galería si está activa
-                if (document.getElementById('galleryModule').classList.contains('active')) {
+                const galleryModule = document.getElementById('galleryModule');
+                if (galleryModule && galleryModule.classList.contains('active')) {
                     loadGalleryFiles();
                 }
             })
@@ -1076,7 +1179,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Recargar la galería si está activa
-                if (document.getElementById('galleryModule').classList.contains('active')) {
+                const galleryModule = document.getElementById('galleryModule');
+                if (galleryModule && galleryModule.classList.contains('active')) {
                     loadGalleryFiles();
                 }
             })
@@ -1115,7 +1219,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 fileModal.hide();
                 
                 // Recargar la galería si está activa
-                if (document.getElementById('galleryModule').classList.contains('active')) {
+                const galleryModule = document.getElementById('galleryModule');
+                if (galleryModule && galleryModule.classList.contains('active')) {
                     loadGalleryFiles();
                 }
             })
@@ -1128,6 +1233,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar usuarios para compartir
     function loadUsersForSharing() {
         const shareUserSelect = document.getElementById('shareUser');
+        if (!shareUserSelect) return;
         
         shareUserSelect.innerHTML = `
             <option value="" selected disabled>Cargando usuarios...</option>
@@ -1167,6 +1273,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar archivos del usuario para compartir
     function loadUserFilesForSharing() {
         const shareFileSelect = document.getElementById('shareFile');
+        if (!shareFileSelect) return;
         
         shareFileSelect.innerHTML = `
             <option value="" selected disabled>Cargando tus archivos...</option>
@@ -1192,7 +1299,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 
                 // Habilitar botón de compartir si hay archivos
-                document.getElementById('shareBtn').disabled = files.length === 0;
+                const shareBtn = document.getElementById('shareBtn');
+                if (shareBtn) {
+                    shareBtn.disabled = files.length === 0;
+                }
             })
             .catch(error => {
                 console.error('Error al cargar archivos:', error);
@@ -1204,9 +1314,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Compartir archivo con otro usuario
     function shareFile() {
-        const shareUser = document.getElementById('shareUser').value;
-        const shareFile = document.getElementById('shareFile').value;
-        const shareMessage = document.getElementById('shareMessage').value;
+        const shareUserSelect = document.getElementById('shareUser');
+        const shareFileSelect = document.getElementById('shareFile');
+        const shareMessageInput = document.getElementById('shareMessage');
+        
+        if (!shareUserSelect || !shareFileSelect || !shareMessageInput) return;
+        
+        const shareUser = shareUserSelect.value;
+        const shareFile = shareFileSelect.value;
+        const shareMessage = shareMessageInput.value;
         
         if (!shareUser || !shareFile) {
             showToast('Error', 'Debes seleccionar un usuario y un archivo', true);
@@ -1228,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Éxito', 'Archivo compartido correctamente');
                 
                 // Limpiar formulario
-                document.getElementById('shareMessage').value = '';
+                shareMessageInput.value = '';
                 
                 // Recargar archivos compartidos
                 loadSharedFiles();
@@ -1242,6 +1358,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar archivos compartidos con el usuario actual
     function loadSharedFiles() {
         const sharedFilesTable = document.querySelector('#sharedFilesTable tbody');
+        if (!sharedFilesTable) return;
         
         sharedFilesTable.innerHTML = `
             <tr>
@@ -1314,6 +1431,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar usuarios para gestión (solo desarrollador)
     function loadUsersForManagement() {
         const usersTable = document.querySelector('#usersTable tbody');
+        if (!usersTable) return;
         
         usersTable.innerHTML = `
             <tr>
@@ -1422,8 +1540,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mostrar modal de confirmación
     function showConfirmModal(title, message, action) {
-        document.getElementById('confirmModalTitle').textContent = title;
-        document.getElementById('confirmModalBody').textContent = message;
+        const confirmModalTitle = document.getElementById('confirmModalTitle');
+        const confirmModalBody = document.getElementById('confirmModalBody');
+        
+        if (!confirmModalTitle || !confirmModalBody) return;
+        
+        confirmModalTitle.textContent = title;
+        confirmModalBody.textContent = message;
         currentAction = action;
         confirmModal.show();
     }
