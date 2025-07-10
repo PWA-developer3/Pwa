@@ -1,1 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><span style="font-family:Georgia;font-weight:bold;">mYpuB</span></title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #12243a 0%, #2a5298 100%);
+            min-height: 100vh;
+        }
+        .mypub-title {
+            font-family: Georgia, serif;
+            font-weight: bold;
+            color: #fff;
+            letter-spacing: 2px;
+        }
+        .mypub-card {
+            background: rgba(255,255,255,0.98);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(34,54,120,0.21);
+            padding: 2rem 1.5rem;
+        }
+        .form-label {
+            font-weight: 500;
+            color: #23355b;
+        }
+        .btn-mypub {
+            background: linear-gradient(90deg, #23355b 0%, #2a5298 100%);
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: 0.15s;
+        }
+        .btn-mypub:hover {
+            background: linear-gradient(90deg, #2a5298 0%, #23355b 100%);
+            color: #fff;
+            letter-spacing: 1px;
+        }
+        .navbar-brand {
+            font-family: Georgia, serif;
+            font-weight: bold;
+            font-size: 1.8rem;
+            color: #fff !important;
+            letter-spacing: 2px;
+        }
+        .help-modal .modal-content {
+            border-radius: 12px;
+        }
+        .main-panel {
+            min-height: 90vh;
+        }
+        .tab-content {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(34,54,120,0.12);
+            padding: 1.5rem;
+        }
+        .gallery-img, .gallery-video {
+            width: 100%;
+            max-height: 220px;
+            object-fit: cover;
+            border-radius: 14px;
+            border: 2px solid #f1f4fa;
+            margin-bottom: 0.7rem;
+        }
+        .like-btn, .dislike-btn {
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+        .like-btn.liked, .dislike-btn.disliked {
+            color: #2a5298 !important;
+        }
+        .dropdown-country {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .mypub-section-title {
+            font-family: Georgia, serif;
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: #23355b;
+        }
+        .public-badge {
+            background: #2a5298;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            padding: 2px 9px;
+        }
+        .private-badge {
+            background: #9e2956;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            padding: 2px 9px;
+        }
+        .admin-badge {
+            background: #eab308;
+            color: #23355b;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            padding: 2px 9px;
+            font-weight: bold;
+        }
+        .comment-section {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .folder-select {
+            border-radius: 8px;
+        }
+        .folder-list {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .folder-item {
+            display: inline-block;
+            background: #e7ecfa;
+            border-radius: 8px;
+            padding: 8px 14px;
+            margin: 3px 5px;
+            font-size: 0.95rem;
+            color: #2a5298;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1.5px solid #2a5298;
+        }
+        .folder-item.selected, .folder-item:hover {
+            background: #2a5298;
+            color: #fff;
+        }
+        .table-users th, .table-users td {
+            vertical-align: middle;
+        }
+        .table-users {
+            border-radius: 10px !important;
+            overflow: hidden;
+        }
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 100%;
+            border: 2px solid #2a5298;
+        }
+        /* Custom scroll */
+        ::-webkit-scrollbar {
+            width: 10px;
+            background: #e0e7fa;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a5298;
+            border-radius: 7px;
+        }
+    </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark navbar-expand-lg" style="background: linear-gradient(85deg, #22335b 0%, #2a5298 100%);">
+      <div class="container-fluid">
+          <span class="navbar-brand"><i class="bi bi-cloud-upload"></i> <span style="font-family:Georgia;font-weight:bold;">mYpuB</span></span>
+          <div class="ms-auto d-flex align-items-center" id="user-nav-panel" style="display:none;">
+            <span id="user-nav-welcome" class="text-white me-3"></span>
+            <button class="btn btn-light btn-sm" id="logout-btn"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+          </div>
+      </div>
+  </nav>
+  <main class="container py-5">
+      <div id="auth-panel" class="row justify-content-center align-items-center main-panel">
+          <div class="col-md-7 col-lg-6">
+              <div class="mypub-card shadow">
+                  <!-- Registro / Login Toggle -->
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                      <span class="mypub-title" id="form-title">Regístrate en <span style="font-family:Georgia;font-weight:bold;">mYpuB</span></span>
+                      <button class="btn btn-link" id="toggle-auth-btn" style="font-weight:bold;text-decoration:none;">
+                          ¿Ya tienes cuenta? Inicia sesión
+                      </button>
+                  </div>
+                  <form id="register-form" autocomplete="off">
+                      <div class="row mb-2">
+                          <div class="col-md-6">
+                              <label for="reg-name" class="form-label">Nombre completo</label>
+                              <input type="text" class="form-control" id="reg-name" required>
+                          </div>
+                          <div class="col-md-6">
+                              <label for="reg-email" class="form-label">Correo electrónico (Gmail)</label>
+                              <input type="email" class="form-control" id="reg-email" pattern=".+@gmail\.com" required>
+                          </div>
+                      </div>
+                      <div class="row mb-2">
+                          <div class="col-md-4">
+                              <label for="reg-gender" class="form-label">Sexo</label>
+                              <select class="form-select" id="reg-gender" required>
+                                  <option value="">Seleccione...</option>
+                                  <option value="Hombre">Hombre</option>
+                                  <option value="Mujer">Mujer</option>
+                                  <option value="Otros">Otros</option>
+                              </select>
+                          </div>
+                          <div class="col-md-4">
+                              <label for="reg-country" class="form-label">País</label>
+                              <select class="form-select" id="reg-country" required>
+                                  <option value="">Cargando países...</option>
+                              </select>
+                          </div>
+                          <div class="col-md-4">
+                              <label for="reg-phone" class="form-label">Teléfono</label>
+                              <div class="input-group">
+                                  <span class="input-group-text" id="phone-prefix">+00</span>
+                                  <input type="text" class="form-control" id="reg-phone" pattern="[0-9]{6,15}" required>
+                              </div>
+                          </div>
+                      </div>
+                      <div class="mb-2">
+                          <label for="reg-password" class="form-label">Contraseña</label>
+                          <input type="password" class="form-control" id="reg-password" required placeholder="Ej: Abcdef1234@#" autocomplete="new-password">
+                          <div class="form-text">
+                              Mínimo 12 caracteres: 6 letras iniciales (primera mayúscula), 4 números, 2 símbolos (@, #, &)
+                          </div>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                          <button type="submit" class="btn btn-mypub px-4"><i class="bi bi-person-plus"></i> Registrarse</button>
+                          <button type="button" class="btn btn-outline-primary btn-sm" id="help-btn"><i class="bi bi-question-circle"></i> AYUDA</button>
+                      </div>
+                  </form>
+                  <form id="login-form" style="display:none;">
+                      <div class="mb-3">
+                          <label for="log-email" class="form-label">Correo electrónico (Gmail)</label>
+                          <input type="email" class="form-control" id="log-email" pattern=".+@gmail\.com" required>
+                      </div>
+                      <div class="mb-3">
+                          <label for="log-password" class="form-label">Contraseña</label>
+                          <input type="password" class="form-control" id="log-password" required autocomplete="current-password">
+                      </div>
+                      <button type="submit" class="btn btn-mypub px-4"><i class="bi bi-box-arrow-in-right"></i> Iniciar sesión</button>
+                  </form>
+                  <div id="auth-error" class="alert alert-danger mt-3" style="display:none;"></div>
+              </div>
+          </div>
+      </div>
+      <!-- Main App Panel -->
+      <div id="main-panel" class="main-panel" style="display:none;">
+          <ul class="nav nav-pills mb-3" id="main-tabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="subir-tab" data-bs-toggle="pill" data-bs-target="#subir" type="button" role="tab"><i class="bi bi-cloud-upload"></i> SUBIR TU</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="galeria-tab" data-bs-toggle="pill" data-bs-target="#galeria" type="button" role="tab"><i class="bi bi-images"></i> GALERÍA</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="compartir-tab" data-bs-toggle="pill" data-bs-target="#compartir" type="button" role="tab"><i class="bi bi-share"></i> COMPARTIR</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="gestion-tab" data-bs-toggle="pill" data-bs-target="#gestion" type="button" role="tab"><i class="bi bi-person-gear"></i> GESTIÓN DE USUARIOS</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="informate-tab" data-bs-toggle="pill" data-bs-target="#informate" type="button" role="tab"><i class="bi bi-info-circle"></i> INFÓRMATE</button>
+              </li>
+          </ul>
+          <div class="tab-content" id="main-tabs-content">
+              <div class="tab-pane fade show active" id="subir" role="tabpanel">
+                  <div class="row">
+                      <div class="col-md-4">
+                          <label class="form-label mypub-section-title">Selecciona carpeta</label>
+                          <div id="user-folders" class="folder-list"></div>
+                          <input type="text" class="form-control mb-2" id="new-folder-name" placeholder="Nueva carpeta">
+                          <button class="btn btn-outline-secondary btn-sm" id="create-folder-btn"><i class="bi bi-folder-plus"></i> Crear carpeta</button>
+                      </div>
+                      <div class="col-md-8">
+                          <form id="upload-form">
+                              <div class="mb-2">
+                                  <label class="form-label mypub-section-title">Selecciona imágenes o vídeos</label>
+                                  <input type="file" id="file-input" class="form-control" accept="image/*,video/*" multiple required>
+                              </div>
+                              <div class="mb-2">
+                                  <label class="form-label">Privacidad</label>
+                                  <select class="form-select" id="file-privacy">
+                                      <option value="public">Público</option>
+                                      <option value="private">Privado</option>
+                                  </select>
+                              </div>
+                              <button type="submit" class="btn btn-mypub"><i class="bi bi-upload"></i> Subir Archivos</button>
+                          </form>
+                          <div id="upload-status" class="mt-3"></div>
+                      </div>
+                  </div>
+              </div>
+              <div class="tab-pane fade" id="galeria" role="tabpanel">
+                  <div id="gallery-container"></div>
+              </div>
+              <div class="tab-pane fade" id="compartir" role="tabpanel">
+                  <div class="row">
+                      <div class="col-md-6">
+                          <label class="form-label mypub-section-title">Selecciona usuario</label>
+                          <select id="share-user-select" class="form-select mb-3"></select>
+                      </div>
+                      <div class="col-md-6">
+                          <label class="form-label mypub-section-title">Selecciona archivo</label>
+                          <select id="share-file-select" class="form-select mb-3"></select>
+                      </div>
+                  </div>
+                  <button class="btn btn-mypub" id="share-file-btn"><i class="bi bi-send"></i> Compartir archivo</button>
+                  <div id="share-status" class="mt-3"></div>
+                  <div id="shared-files-list" class="mt-4"></div>
+              </div>
+              <div class="tab-pane fade" id="gestion" role="tabpanel">
+                  <div class="mypub-section-title mb-3">Gestión de usuarios</div>
+                  <div id="users-table-container"></div>
+              </div>
+              <div class="tab-pane fade" id="informate" role="tabpanel">
+                  <div class="mypub-section-title mb-2">Sobre <span style="font-family:Georgia;font-weight:bold;">mYpuB</span></div>
+                  <div>
+                      <b style="font-family:Georgia;font-weight:bold;">mYpuB</b> es una plataforma moderna creada para que puedas subir, gestionar y compartir tus imágenes y vídeos fácilmente, desde cualquier dispositivo, navegador y país. Podrás elegir la privacidad de tus archivos, compartirlos con otros usuarios y gestionarlos en carpetas personalizadas.<br><br>
+                      <b>¿Cómo funciona?</b>
+                      <ul>
+                          <li>Regístrate o inicia sesión con tu cuenta de Gmail.</li>
+                          <li>Sube imágenes o vídeos en la sección <b>SUBIR TU</b>.</li>
+                          <li>Gestiona tus archivos y visualiza los de otros usuarios en la <b>GALERÍA</b>.</li>
+                          <li>Comparte archivos con otros usuarios en <b>COMPARTIR</b>.</li>
+                          <li>La gestión avanzada de usuarios y archivos está disponible sólo para el desarrollador.</li>
+                      </ul>
+                      <b>Desarrollador:</b><br>
+                      Nombre completo: Tarciano ENZEMA NCHAMA<br>
+                      Formación académica: Finalista universitario de la UNGE<br>
+                      Facultad: Ciencias económicas gestión y administración<br>
+                      Departamento: Informática de gestión empresarial<br>
+                      Contacto: <a href="mailto:enzemajr@gmail.com">enzemajr@gmail.com</a><br>
+                      Fecha final del desarrollo: 06/07/2025
+                  </div>
+              </div>
+          </div>
+      </div>
+  </main>
 
+  <!-- Modal AYUDA -->
+  <div class="modal fade help-modal" tabindex="-1" id="helpModal">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title"><i class="bi bi-question-circle"></i> Centro de Ayuda <span style="font-family:Georgia;font-weight:bold;">mYpuB</span></h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                  <div class="d-grid gap-2 mb-3">
+                      <button class="btn btn-mypub" id="help-email-btn"><i class="bi bi-envelope"></i> Enviar consulta por Email</button>
+                      <button class="btn btn-success" id="help-whatsapp-btn"><i class="bi bi-whatsapp"></i> Enviar consulta por WhatsApp</button>
+                  </div>
+                  <form id="help-email-form" style="display:none;">
+                      <div class="mb-2">
+                          <label class="form-label">Nombre completo</label>
+                          <input type="text" class="form-control" id="help-email-name" required>
+                      </div>
+                      <div class="mb-2">
+                          <label class="form-label">Correo electrónico</label>
+                          <input type="email" class="form-control" id="help-email-mail" required>
+                      </div>
+                      <button type="submit" class="btn btn-mypub"><i class="bi bi-send"></i> Enviar al desarrollador</button>
+                  </form>
+                  <form id="help-whatsapp-form" style="display:none;">
+                      <div class="mb-2">
+                          <label class="form-label">Nombre completo</label>
+                          <input type="text" class="form-control" id="help-whatsapp-name" required>
+                      </div>
+                      <div class="mb-2">
+                          <label class="form-label">Número WhatsApp</label>
+                          <input type="text" class="form-control" id="help-whatsapp-phone" required>
+                      </div>
+                      <button type="submit" class="btn btn-success"><i class="bi bi-whatsapp"></i> Enviar al desarrollador</button>
+                  </form>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Bootstrap Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Main JS -->
+  <script src="main.js"></script>
+</body>
+</html>
