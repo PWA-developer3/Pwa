@@ -3,280 +3,566 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mYpuB - Plataforma de Compartición de Medios</title>
+    <title>mYpuB - Comparte tus momentos</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .brand-name {
+        body {
+            background-color: #f8f9fa;
+        }
+        .brand {
             font-family: Georgia, serif;
             font-weight: bold;
         }
-        .auth-container {
-            max-width: 500px;
-            margin: 2rem auto;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
         }
-        .hidden {
-            display: none;
+        .card:hover {
+            transform: translateY(-5px);
         }
-        .gallery-item {
-            margin-bottom: 1.5rem;
+        .form-control:focus {
+            border-color: #6c757d;
+            box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.25);
         }
-        .media-container {
+        .btn-custom {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+        }
+        .btn-custom:hover {
+            background-color: #5a6268;
+            color: white;
+        }
+        .media-card {
             position: relative;
-            padding-top: 56.25%;
+            overflow: hidden;
+            border-radius: 10px;
         }
-        .media-container img,
-        .media-container video {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .media-card img, .media-card video {
             width: 100%;
-            height: 100%;
+            height: 200px;
             object-fit: cover;
         }
-        .like-counter {
-            font-size: 0.9rem;
-            color: #666;
+        .media-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
         }
-        .nav-link {
-            color: #333;
-            font-weight: 500;
+        .welcome-message {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
         }
-        .nav-link:hover {
-            color: #0d6efd;
+        .country-flag {
+            width: 20px;
+            height: 15px;
+            margin-right: 5px;
+        }
+        .help-panel {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            color: #495057;
+            background-color: #f8f9fa;
+            border-color: #dee2e6 #dee2e6 #f8f9fa;
+        }
+        .nav-tabs .nav-link {
+            color: #6c757d;
         }
     </style>
 </head>
 <body>
-    <!-- Auth Section -->
-    <div id="authSection">
-        <!-- Register Form -->
-        <div id="registerForm" class="auth-container">
-            <h2 class="text-center mb-4 brand-name">Regístrate en mYpuB</h2>
-            <form id="registrationForm">
-                <div class="mb-3">
-                    <label class="form-label">Nombre completo</label>
-                    <input type="text" class="form-control" id="regName" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Correo electrónico (Gmail)</label>
-                    <input type="email" class="form-control" id="regEmail" pattern=".*@gmail\.com$" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Sexo</label>
-                    <select class="form-select" id="regGender" required>
-                        <option value="">Seleccione...</option>
-                        <option value="hombre">Hombre</option>
-                        <option value="mujer">Mujer</option>
-                        <option value="otro">Otros</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">País</label>
-                    <select class="form-select" id="regCountry" required></select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Teléfono</label>
-                    <div class="input-group">
-                        <span class="input-group-text" id="phonePrefix">+</span>
-                        <input type="tel" class="form-control" id="regPhone" required>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Contraseña</label>
-                    <input type="password" class="form-control" id="regPassword" required>
-                    <small class="text-muted">12 dígitos: 6 letras (primera mayúscula), 4 números, 2 símbolos (@#&)</small>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Registrarse</button>
-                <div class="text-center mt-3">
-                    <button type="button" class="btn btn-link" id="showLoginBtn">¿Ya tienes cuenta? Inicia sesión</button>
-                </div>
-                <div class="text-center mt-3">
-                    <button type="button" class="btn btn-secondary" id="helpBtn">
-                        <i class="bi bi-question-circle"></i> AYUDA
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Login Form -->
-        <div id="loginForm" class="auth-container hidden">
-            <h2 class="text-center mb-4 brand-name">Inicie la sesión en mYpuB</h2>
-            <form id="loginFormElement">
-                <div class="mb-3">
-                    <label class="form-label">Correo electrónico</label>
-                    <input type="email" class="form-control" id="loginEmail" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Contraseña</label>
-                    <input type="password" class="form-control" id="loginPassword" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Iniciar Sesión</button>
-                <div class="text-center mt-3">
-                    <button type="button" class="btn btn-link" id="showRegisterBtn">¿No tienes cuenta? Regístrate</button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Help Modal -->
-        <div class="modal fade" id="helpModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Centro de Ayuda</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-outline-primary" id="emailHelpBtn">
-                                <i class="bi bi-envelope"></i> Consulta por Email
-                            </button>
-                            <button class="btn btn-outline-success" id="whatsappHelpBtn">
-                                <i class="bi bi-whatsapp"></i> Consulta por WhatsApp
-                            </button>
+    <!-- Auth Container -->
+    <div class="container py-5" id="auth-container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4 brand" id="auth-title">Regístrate en <span class="brand">mYpuB</span></h2>
+                        
+                        <div id="auth-forms">
+                            <!-- Registration Form -->
+                            <form id="register-form">
+                                <div class="mb-3">
+                                    <label for="fullname" class="form-label">Nombre completo</label>
+                                    <input type="text" class="form-control" id="fullname" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Correo electrónico (Gmail)</label>
+                                    <input type="email" class="form-control" id="email" required>
+                                    <div class="invalid-feedback">Por favor ingrese un correo de Gmail válido.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Sexo</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="gender" id="male" value="Hombre" checked>
+                                            <label class="form-check-label" for="male">Hombre</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="gender" id="female" value="Mujer">
+                                            <label class="form-check-label" for="female">Mujer</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="gender" id="other" value="Otros">
+                                            <label class="form-check-label" for="other">Otros</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="country" class="form-label">País</label>
+                                    <select class="form-select" id="country" required>
+                                        <option value="" selected disabled>Selecciona tu país</option>
+                                        <!-- Countries will be loaded dynamically -->
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">Teléfono</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" id="phone-prefix">+</span>
+                                        <input type="tel" class="form-control" id="phone" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="password" required>
+                                    <small class="form-text text-muted">Debe tener 12 caracteres: 6 letras (primera mayúscula), 4 números y 2 símbolos (@#&)</small>
+                                    <div class="invalid-feedback">La contraseña no cumple con los requisitos.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirm-password" class="form-label">Confirmar contraseña</label>
+                                    <input type="password" class="form-control" id="confirm-password" required>
+                                    <div class="invalid-feedback">Las contraseñas no coinciden.</div>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-custom">Registrarse</button>
+                                    <button type="button" class="btn btn-link" id="show-login">¿Ya tienes cuenta? Inicia sesión</button>
+                                    <button type="button" class="btn btn-outline-secondary mt-3" id="help-btn">AYUDA <i class="bi bi-question-circle"></i></button>
+                                </div>
+                            </form>
+                            
+                            <!-- Help Panel -->
+                            <div class="help-panel" id="help-panel">
+                                <h5 class="mb-3">Opciones de ayuda</h5>
+                                <div class="mb-3">
+                                    <button class="btn btn-outline-primary w-100 mb-2" id="email-help">Enviar consulta por Email</button>
+                                    <div id="email-help-form" style="display: none;">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control mb-2" id="help-name" placeholder="Nombre completo">
+                                            <input type="email" class="form-control mb-2" id="help-email" placeholder="Email para respuesta">
+                                            <button class="btn btn-sm btn-custom" id="send-email">Enviar al desarrollador</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-outline-success w-100 mb-2" id="whatsapp-help">Enviar consulta por WhatsApp</button>
+                                    <div id="whatsapp-help-form" style="display: none;">
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control mb-2" id="whatsapp-name" placeholder="Nombre completo">
+                                            <input type="tel" class="form-control mb-2" id="whatsapp-phone" placeholder="Número de WhatsApp">
+                                            <button class="btn btn-sm btn-custom" id="send-whatsapp">Enviar al desarrollador</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Login Form -->
+                            <form id="login-form" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="login-email" class="form-label">Correo electrónico</label>
+                                    <input type="email" class="form-control" id="login-email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="login-password" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="login-password" required>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-custom">Iniciar sesión</button>
+                                    <button type="button" class="btn btn-link" id="show-register">¿No tienes cuenta? Regístrate</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Main Application Section -->
-    <div id="mainSection" class="hidden">
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <div class="container">
-                <a class="navbar-brand brand-name" href="#">mYpuB</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
+    
+    <!-- Main App Container (hidden by default) -->
+    <div class="container-fluid py-3" id="app-container" style="display: none;">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="brand"><span class="brand">mYpuB</span></h4>
+                        <button class="btn btn-sm btn-outline-secondary d-md-none" data-bs-toggle="collapse" data-bs-target=".sidebar">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="uploadNav">
-                                <i class="bi bi-cloud-upload"></i> SUBIR TU
+                            <a class="nav-link active" href="#" data-section="upload">
+                                <i class="bi bi-cloud-arrow-up me-2"></i> SUBIR TU
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="galleryNav">
-                                <i class="bi bi-images"></i> GALERÍA
+                            <a class="nav-link" href="#" data-section="gallery">
+                                <i class="bi bi-images me-2"></i> GALERÍA
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="shareNav">
-                                <i class="bi bi-share"></i> COMPARTIR
+                            <a class="nav-link" href="#" data-section="share">
+                                <i class="bi bi-share me-2"></i> COMPARTIR
+                            </a>
+                        </li>
+                        <li class="nav-item" id="user-management-item" style="display: none;">
+                            <a class="nav-link" href="#" data-section="users">
+                                <i class="bi bi-people me-2"></i> GESTIÓN DE USUARIOS
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="userManagementNav">
-                                <i class="bi bi-people"></i> GESTIÓN DE USUARIOS
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#" id="infoNav">
-                                <i class="bi bi-info-circle"></i> INFÓRMATE
+                            <a class="nav-link" href="#" data-section="info">
+                                <i class="bi bi-info-circle me-2"></i> INFÓRMATE
                             </a>
                         </li>
                     </ul>
-                    <div class="d-flex">
-                        <span class="navbar-text me-3" id="userWelcome"></span>
-                        <button class="btn btn-outline-danger" id="logoutBtn">
-                            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Content Sections -->
-        <div class="container mt-4">
-            <!-- Upload Section -->
-            <div id="uploadSection" class="section-content">
-                <h3 class="mb-4">Subir Contenido</h3>
-                <form id="uploadForm" class="mb-4">
-                    <div class="mb-3">
-                        <label class="form-label">Seleccionar archivos</label>
-                        <input type="file" class="form-control" id="fileInput" multiple accept="image/*,video/*">
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="isPublic" checked>
-                            <label class="form-check-label">Contenido público</label>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-upload"></i> Subir
-                    </button>
-                </form>
-            </div>
-
-            <!-- Gallery Section -->
-            <div id="gallerySection" class="section-content hidden">
-                <h3 class="mb-4">Galería</h3>
-                <div class="row" id="galleryGrid"></div>
-            </div>
-
-            <!-- Share Section -->
-            <div id="shareSection" class="section-content hidden">
-                <h3 class="mb-4">Compartir Contenido</h3>
-                <div class="row">
-                    <div class="col-md-6">
-                        <select class="form-select mb-3" id="userSelect">
-                            <option value="">Seleccionar usuario</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <select class="form-select mb-3" id="contentSelect">
-                            <option value="">Seleccionar contenido</option>
-                        </select>
-                    </div>
-                </div>
-                <button class="btn btn-primary" id="shareButton">
-                    <i class="bi bi-share"></i> Compartir
-                </button>
-            </div>
-
-            <!-- User Management Section -->
-            <div id="userManagementSection" class="section-content hidden">
-                <h3 class="mb-4">Gestión de Usuarios</h3>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Email</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="userTable"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Info Section -->
-            <div id="infoSection" class="section-content hidden">
-                <h3 class="mb-4">Información</h3>
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Sobre mYpuB</h5>
-                        <p class="card-text">
-                            mYpuB es una plataforma para compartir imágenes y videos de forma segura y eficiente.
-                        </p>
-                        <h5 class="card-title mt-4">Desarrollador</h5>
-                        <ul class="list-unstyled">
-                            <li><strong>Nombre:</strong> Tarciano ENZEMA NCHAMA</li>
-                            <li><strong>Formación:</strong> Finalista universitario de la UNGE</li>
-                            <li><strong>Facultad:</strong> Ciencias económicas gestión y administración</li>
-                            <li><strong>Departamento:</strong> Informática de gestión empresarial</li>
-                            <li><strong>Contacto:</strong> enzemajr@gmail.com</li>
-                            <li><strong>Fecha final del desarrollo:</strong> 06/07/2025</li>
+                    <hr>
+                    <div class="dropdown mb-3">
+                        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
+                            <img src="https://via.placeholder.com/32" alt="User" width="32" height="32" class="rounded-circle me-2">
+                            <span id="sidebar-username"></span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+                            <li><a class="dropdown-item" href="#" id="profile-link">Perfil</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="logout-btn">Cerrar sesión</a></li>
                         </ul>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-md-4">
+                <!-- Welcome Message -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2 welcome-message" id="welcome-message"></h1>
+                </div>
+                
+                <!-- App Sections -->
+                <div id="app-sections">
+                    <!-- Upload Section -->
+                    <div id="upload-section">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-cloud-arrow-up me-2"></i> Subir archivos</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="upload-form">
+                                    <div class="mb-3">
+                                        <label for="media-files" class="form-label">Selecciona imágenes o videos</label>
+                                        <input class="form-control" type="file" id="media-files" multiple accept="image/*,video/*">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="folder-name" class="form-label">Nombre de la carpeta (opcional)</label>
+                                        <input type="text" class="form-control" id="folder-name" placeholder="Ej: Vacaciones 2023">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Visibilidad</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="visibility" id="public" value="public" checked>
+                                            <label class="form-check-label" for="public">
+                                                Público (visible para todos los usuarios)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="visibility" id="private" value="private">
+                                            <label class="form-check-label" for="private">
+                                                Privado (solo visible para ti)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="media-title" class="form-label">Título (opcional)</label>
+                                        <input type="text" class="form-control" id="media-title" placeholder="Título descriptivo">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="media-description" class="form-label">Descripción (opcional)</label>
+                                        <textarea class="form-control" id="media-description" rows="3"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-custom">Subir archivos</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-collection me-2"></i> Tus carpetas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="folders-container">
+                                    <!-- Folders will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Gallery Section -->
+                    <div id="gallery-section" style="display: none;">
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="bi bi-images me-2"></i> Galería pública</h5>
+                                <div>
+                                    <input type="text" class="form-control form-control-sm" id="gallery-search" placeholder="Buscar...">
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="gallery-container">
+                                    <!-- Public media will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Share Section -->
+                    <div id="share-section" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-share me-2"></i> Compartir archivos</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="share-user" class="form-label">Seleccionar usuario</label>
+                                            <select class="form-select" id="share-user">
+                                                <option value="" selected disabled>Selecciona un usuario</option>
+                                                <!-- Users will be loaded here -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="share-media" class="form-label">Seleccionar archivo</label>
+                                            <select class="form-select" id="share-media">
+                                                <option value="" selected disabled>Selecciona un archivo</option>
+                                                <!-- User's media will be loaded here -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-custom" id="share-btn">Compartir</button>
+                                
+                                <hr>
+                                
+                                <h6>Archivos compartidos contigo</h6>
+                                <div class="row mt-3" id="shared-with-me-container">
+                                    <!-- Shared media will be loaded here -->
+                                </div>
+                                
+                                <h6 class="mt-4">Archivos que has compartido</h6>
+                                <div class="row mt-3" id="shared-by-me-container">
+                                    <!-- Media shared by user will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User Management Section -->
+                    <div id="users-section" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-people me-2"></i> Gestión de usuarios</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Email</th>
+                                                <th>País</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="users-table">
+                                            <!-- Users will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Info Section -->
+                    <div id="info-section" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-info-circle me-2"></i> Información sobre mYpuB</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4">
+                                    <h5>¿Qué es mYpuB?</h5>
+                                    <p>mYpuB es una plataforma para compartir imágenes y videos con otros usuarios. Puedes subir tus archivos, organizarlos en carpetas y decidir si quieres que sean públicos o privados.</p>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h5>¿Cómo usar mYpuB?</h5>
+                                    <ol>
+                                        <li>Regístrate con tu cuenta de Gmail</li>
+                                        <li>Inicia sesión</li>
+                                        <li>Sube tus imágenes y videos</li>
+                                        <li>Organízalos en carpetas si lo deseas</li>
+                                        <li>Define la visibilidad (público o privado)</li>
+                                        <li>Explora la galería pública de otros usuarios</li>
+                                        <li>Comparte archivos con usuarios específicos</li>
+                                    </ol>
+                                </div>
+                                
+                                <div>
+                                    <h5>Desarrollador</h5>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Nombre completo:</strong> Tarciano ENZEMA NCHAMA</li>
+                                        <li><strong>Formación académica:</strong> Finalista universitario de la UNGE</li>
+                                        <li><strong>Facultad:</strong> Ciencias económicas gestión y administración</li>
+                                        <li><strong>Departamento:</strong> Informática de gestión empresarial</li>
+                                        <li><strong>Contacto:</strong> enzemajr@gmail.com</li>
+                                        <li><strong>Fecha final del desarrollo:</strong> 06/07/2025</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Media Details -->
+    <div class="modal fade" id="mediaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mediaModalTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3" id="mediaModalContent">
+                        <!-- Media will be displayed here -->
+                    </div>
+                    <div class="mb-3">
+                        <p id="mediaModalDescription"></p>
+                        <p class="text-muted"><small>Subido por: <span id="mediaModalAuthor"></span> el <span id="mediaModalDate"></span></small></p>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-2" id="like-btn">
+                                <i class="bi bi-hand-thumbs-up"></i> <span id="like-count">0</span>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" id="dislike-btn">
+                                <i class="bi bi-hand-thumbs-down"></i> <span id="dislike-count">0</span>
+                            </button>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-success me-2" id="download-btn">
+                                <i class="bi bi-download"></i> Descargar
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" id="share-modal-btn" style="display: none;">
+                                <i class="bi bi-share"></i> Compartir
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" id="delete-media-btn" style="display: none;">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="w-100" id="comments-container">
+                        <!-- Comments will be loaded here -->
+                    </div>
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" id="comment-input" placeholder="Escribe un comentario...">
+                        <button class="btn btn-custom" id="post-comment-btn">Enviar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for User Edit -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="user-edit-form">
+                        <input type="hidden" id="edit-user-id">
+                        <div class="mb-3">
+                            <label for="edit-fullname" class="form-label">Nombre completo</label>
+                            <input type="text" class="form-control" id="edit-fullname" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="edit-email" required readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sexo</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="edit-gender" id="edit-male" value="Hombre">
+                                    <label class="form-check-label" for="edit-male">Hombre</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="edit-gender" id="edit-female" value="Mujer">
+                                    <label class="form-check-label" for="edit-female">Mujer</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="edit-gender" id="edit-other" value="Otros">
+                                    <label class="form-check-label" for="edit-other">Otros</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-country" class="form-label">País</label>
+                            <select class="form-select" id="edit-country" required>
+                                <!-- Countries will be loaded here -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-phone" class="form-label">Teléfono</label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="edit-phone-prefix">+</span>
+                                <input type="tel" class="form-control" id="edit-phone" required>
+                            </div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="edit-is-blocked">
+                            <label class="form-check-label" for="edit-is-blocked">Bloqueado</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-custom" id="save-user-btn">Guardar cambios</button>
+                    <button type="button" class="btn btn-danger" id="delete-user-btn" style="display: none;">Eliminar usuario</button>
                 </div>
             </div>
         </div>
@@ -284,7 +570,7 @@
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Main JavaScript -->
+    <!-- Main JS -->
     <script src="main.js"></script>
 </body>
 </html>
